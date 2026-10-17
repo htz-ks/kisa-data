@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, History } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import CustomerHistoryDrawer from "@/components/CustomerHistoryDrawer";
 
 const EMPTY = { name: "", phone: "", email: "", address: "", notes: "" };
 
@@ -24,6 +25,7 @@ export default function ContactsPage({ kind }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
+  const [historyId, setHistoryId] = useState(null);
 
   const load = async () => {
     const { data } = await api.get(endpoint);
@@ -70,7 +72,7 @@ export default function ContactsPage({ kind }) {
               <th className="px-4 py-3">Telefon</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3 text-right">Borxh (€)</th>
-              {isAdmin && <th className="px-4 py-3 text-right">Veprime</th>}
+              {(isAdmin || kind === "customer") && <th className="px-4 py-3 text-right">Veprime</th>}
             </tr>
           </thead>
           <tbody>
@@ -84,16 +86,30 @@ export default function ContactsPage({ kind }) {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-right">
+                    {kind === "customer" && (
+                      <Button variant="ghost" size="sm" onClick={() => setHistoryId(c.id)} className="text-indigo-300" data-testid={`customer-history-${c.id}`}>
+                        <History className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => del(c.id)} className="text-red-400"><Trash2 className="w-3.5 h-3.5" /></Button>
                   </td>
                 )}
+                {!isAdmin && kind === "customer" && (
+                  <td className="px-4 py-3 text-right">
+                    <Button variant="ghost" size="sm" onClick={() => setHistoryId(c.id)} className="text-indigo-300" data-testid={`customer-history-${c.id}`}>
+                      <History className="w-3.5 h-3.5" />
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={isAdmin ? 5 : 4} className="px-4 py-10 text-center text-slate-500">Pa të dhëna.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={isAdmin ? 5 : (kind === "customer" ? 5 : 4)} className="px-4 py-10 text-center text-slate-500">Pa të dhëna.</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {kind === "customer" && <CustomerHistoryDrawer customerId={historyId} onClose={() => setHistoryId(null)} />}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-[#141C2B] border-slate-800">

@@ -3,15 +3,28 @@ import api, { eur, API } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Eye } from "lucide-react";
+import { Download, Eye, MessageCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
+function waLinkFor(sale, customers) {
+  const cust = customers.find((c) => c.id === sale.customer_id);
+  const phone = (cust?.phone || "").replace(/[^0-9+]/g, "");
+  const msg = encodeURIComponent(
+    `Përshëndetje${cust ? " " + cust.name : ""}!\n\nFatura: ${sale.invoice_no}\nTotali: € ${(sale.total || 0).toFixed(2)}\nBorxh: € ${(sale.due_amount || 0).toFixed(2)}\n\nFaleminderit - Prodata Shop`
+  );
+  return phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+}
+
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [view, setView] = useState(null);
-  useEffect(() => { api.get("/sales").then(({ data }) => setSales(data)); }, []);
+  useEffect(() => {
+    api.get("/sales").then(({ data }) => setSales(data));
+    api.get("/customers").then(({ data }) => setCustomers(data));
+  }, []);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
@@ -49,6 +62,7 @@ export default function SalesPage() {
                 <td className="px-4 py-3 text-right">
                   <Button variant="ghost" size="sm" onClick={() => setView(s)} data-testid={`sale-view-${s.id}`}><Eye className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank")} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => window.open(waLinkFor(s, customers), "_blank")} className="text-green-400" data-testid={`sale-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></Button>
                 </td>
               </tr>
             ))}
@@ -96,6 +110,10 @@ export default function SalesPage() {
                 </div>
               </div>
               <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" onClick={() => window.open(`${API}/sales/${view.id}/invoice.pdf`, "_blank")}><Download className="w-4 h-4 mr-2" /> Shkarko PDF</Button>
+              <Button variant="outline" className="w-full border-green-500/40 text-green-400 hover:bg-green-500/10"
+                onClick={() => window.open(waLinkFor(view, customers), "_blank")} data-testid={`sale-whatsapp-view-${view.id}`}>
+                <MessageCircle className="w-4 h-4 mr-2" /> Dërgo në WhatsApp
+              </Button>
             </div>
           )}
         </DialogContent>

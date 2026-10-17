@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api, { eur, API, formatApiErrorDetail } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download, ScanLine, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 export default function POSPage() {
   const [products, setProducts] = useState([]);
@@ -25,6 +26,8 @@ export default function POSPage() {
   const [discount, setDiscount] = useState(0);
   const [imeiFor, setImeiFor] = useState(null); // product object
   const [doneSale, setDoneSale] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const searchRef = useRef(null);
 
   const load = async () => {
     const [p, c] = await Promise.all([api.get("/products"), api.get("/customers")]);
@@ -32,6 +35,41 @@ export default function POSPage() {
     setCustomers(c.data);
   };
   useEffect(() => { load(); }, []);
+
+  // Keyboard shortcut: F2 or "/" focuses search; "s" opens scanner
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target?.tagName || "").toLowerCase();
+      const typing = tag === "input" || tag === "textarea" || e.target?.isContentEditable;
+      if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus(); return; }
+      if (!typing && e.key === "/") { e.preventDefault(); searchRef.current?.focus(); return; }
+      if (!typing && (e.key === "s" || e.key === "S")) { e.preventDefault(); setScannerOpen(true); return; }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const handleBarcodeDetected = (code) => {
+    setScannerOpen(false);
+    // 1. Try accessory/phone by barcode
+    const byBarcode = products.find((p) => p.barcode && p.barcode === code);
+    if (byBarcode) {
+      addToCart(byBarcode);
+      toast.success(`U shtua: ${byBarcode.name}`);
+      return;
+    }
+    // 2. Try phone by IMEI
+    const phoneByImei = products.find((p) =>
+      (p.imeis || []).some((x) => x.imei === code && x.status === "in_stock")
+    );
+    if (phoneByImei) {
+      setCart((prev) => [...prev, { product_id: phoneByImei.id, name: phoneByImei.name, type: "phone", imei: code, quantity: 1, sale_price: phoneByImei.sale_price }]);
+      toast.success(`Telefon u shtua: ${phoneByImei.name}`);
+      return;
+    }
+    toast.error(`Barkodi "${code}" nuk u gjet`);
+    setQ(code);
+  };
 
   const filtered = products.filter((p) => {
     if (!q) return true;
@@ -131,16 +169,23 @@ export default function POSPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
-      <PageHeader title="POS — Shitje e re" subtitle="Zgjidh produktet dhe përfundo faturën" testid="pos-header" />
+      <PageHeader title="POS — Shitje e re" subtitle="F2 ose / për të kërkuar · S për skanim" testid="pos-header" />
 
       <div className="grid lg:grid-cols-5 gap-5">
         {/* Products grid */}
         <div className="lg:col-span-3">
-          <div className="relative mb-4">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Kërko emër / markë / barkod / IMEI…"
-              className="pl-10 h-11 bg-slate-900/50 border-slate-800" data-testid="pos-search-input" />
+          <div className="flex gap-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder="Kërko emër / markë / barkod / IMEI…"
+                className="pl-10 h-11 bg-slate-900/50 border-slate-800" data-testid="pos-search-input" />
+            </div>
+            <Button variant="outline" onClick={() => setScannerOpen(true)}
+              className="h-11 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+              data-testid="pos-scan-btn">
+              <ScanLine className="w-4 h-4 mr-1" /> Skano
+            </Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="pos-products-grid">
             {filtered.map((p) => (
@@ -291,9 +336,25 @@ export default function POSPage() {
               onClick={() => downloadInvoice(doneSale.id)} data-testid="pos-download-invoice-btn">
               <Download className="w-4 h-4 mr-2" /> Shkarko Faturën PDF
             </Button>
+            {(() => {
+              const cust = customers.find((c) => c.id === doneSale?.customer_id);
+              const phone = (cust?.phone || "").replace(/[^0-9+]/g, "");
+              const msg = encodeURIComponent(
+                `Përshëndetje${cust ? " " + cust.name : ""}! Faleminderit për blerjen.\n\nFatura: ${doneSale?.invoice_no}\nTotali: € ${(doneSale?.total || 0).toFixed(2)}\nPaguar: € ${(doneSale?.paid_amount || 0).toFixed(2)}\nBorxh: € ${(doneSale?.due_amount || 0).toFixed(2)}\n\nProdata Shop`
+              );
+              const href = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+              return (
+                <Button variant="outline" className="w-full border-green-500/40 text-green-400 hover:bg-green-500/10"
+                  onClick={() => window.open(href, "_blank")} data-testid="pos-whatsapp-btn">
+                  <MessageCircle className="w-4 h-4 mr-2" /> Dërgo në WhatsApp
+                </Button>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
+
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleBarcodeDetected} />
     </div>
   );
 }

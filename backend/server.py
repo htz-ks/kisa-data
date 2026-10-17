@@ -808,6 +808,84 @@ async def top_products(_u: dict = Depends(get_current_user)):
     return data
 
 
+# ---------- CSV exports ----------
+def _csv_response(rows: list[list], filename: str) -> StreamingResponse:
+    import csv
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    for r in rows:
+        writer.writerow(r)
+    data = buf.getvalue().encode("utf-8-sig")  # BOM for Excel
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api.get("/reports/sales.csv")
+async def export_sales_csv(_a: dict = Depends(require_admin)):
+    sales = await db.sales.find({}).sort("created_at", -1).to_list(10000)
+    rows = [["Nr. Fature", "Data", "Klienti", "Pagesa", "Nëntotali (€)", "Zbritja (€)", "Totali (€)", "Paguar (€)", "Borxh (€)", "Shitësi"]]
+    for s in sales:
+        rows.append([
+            s.get("invoice_no", ""),
+            (s.get("created_at", "") or "")[:19].replace("T", " "),
+            s.get("customer_name", "") or "Klient i rastit",
+            s.get("payment_method", "").upper(),
+            f"{s.get('subtotal', 0):.2f}",
+            f"{s.get('discount', 0):.2f}",
+            f"{s.get('total', 0):.2f}",
+            f"{s.get('paid_amount', 0):.2f}",
+            f"{s.get('due_amount', 0):.2f}",
+            s.get("created_by_name", "") or "",
+        ])
+    return _csv_response(rows, f"shitjet_{datetime.now().strftime('%Y%m%d')}.csv")
+
+
+@api.get("/reports/stock.csv")
+async def export_stock_csv(_a: dict = Depends(require_admin)):
+    products = await db.products.find({}).sort("name", 1).to_list(10000)
+    categories = {str(c["_id"]): c["name"] for c in await db.categories.find({}).to_list(1000)}
+    rows = [["Produkti", "Lloji", "Markë", "Kategoria", "Barkod", "Çmim blerje (€)", "Çmim shitje (€)", "Sasia", "Alarm", "IMEI në stok"]]
+    for p in products:
+        in_stock_imeis = [x["imei"] for x in (p.get("imeis") or []) if x.get("status") == "in_stock"]
+        rows.append([
+            p.get("name", ""),
+            "Telefon" if p.get("type") == "phone" else "Aksesor",
+            p.get("brand", "") or "",
+            categories.get(p.get("category_id", "") or "", ""),
+            p.get("barcode", "") or "",
+            f"{p.get('cost_price', 0):.2f}",
+            f"{p.get('sale_price', 0):.2f}",
+            p.get("quantity", 0),
+            p.get("low_stock_threshold", 0),
+            " | ".join(in_stock_imeis),
+        ])
+    return _csv_response(rows, f"stoku_{datetime.now().strftime('%Y%m%d')}.csv")
+
+
+# ---------- Customer history ----------
+@api.get("/customers/{cid}/history")
+async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"_id": ObjectId(cid)})
+    if not customer:
+        raise HTTPException(404, "Klienti nuk u gjet")
+    sales = await db.sales.find({"customer_id": cid}).sort("created_at", -1).to_list(1000)
+    payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).sort("created_at", -1).to_list(1000)
+    totals = {
+        "total_spent": sum(s.get("total", 0) for s in sales),
+        "total_paid": sum(s.get("paid_amount", 0) for s in sales) + sum(p.get("amount", 0) for p in payments),
+        "orders_count": len(sales),
+    }
+    return {
+        "customer": doc_to_json(customer),
+        "sales": [doc_to_json(s) for s in sales],
+        "payments": [doc_to_json(p) for p in payments],
+        "totals": totals,
+    }
+
+
 # ---------- Startup ----------
 @app.on_event("startup")
 async def startup():

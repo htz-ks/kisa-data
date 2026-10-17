@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import api, { eur } from "@/lib/api";
+import api, { eur, API } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line,
 } from "recharts";
@@ -34,7 +36,27 @@ export default function ReportsPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
-      <PageHeader title="Raportet" subtitle="Analiza e shitjeve, fitimit dhe stokut" />
+      <PageHeader title="Raportet" subtitle="Analiza e shitjeve, fitimit dhe stokut"
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={async () => {
+              const { data } = await api.get("/reports/sales.csv", { responseType: "blob" });
+              const url = URL.createObjectURL(data);
+              const a = document.createElement("a"); a.href = url; a.download = `shitjet_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            }} data-testid="export-sales-btn">
+              <Download className="w-4 h-4 mr-1" /> Shitjet CSV
+            </Button>
+            <Button variant="outline" onClick={async () => {
+              const { data } = await api.get("/reports/stock.csv", { responseType: "blob" });
+              const url = URL.createObjectURL(data);
+              const a = document.createElement("a"); a.href = url; a.download = `stoku_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            }} data-testid="export-stock-btn">
+              <Download className="w-4 h-4 mr-1" /> Stoku CSV
+            </Button>
+          </div>
+        } />
 
       <div className="grid md:grid-cols-4 gap-4 mb-6">
         <div className="stat-card"><div className="text-xs uppercase font-mono-pd text-slate-500">Të ardhura totale</div><div className="text-2xl font-extrabold text-emerald-400 mt-2">{eur(totalRevenue)}</div></div>
