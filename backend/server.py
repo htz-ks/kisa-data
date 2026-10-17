@@ -329,7 +329,7 @@ async def delete_category(cid: str, _a: dict = Depends(require_admin)):
 
 # ---------- Suppliers ----------
 @api.get("/suppliers")
-async def list_suppliers(_u: dict = Depends(get_current_user)):
+async def list_suppliers(_u: dict = Depends(require_admin)):
     data = await db.suppliers.find({}).sort("name", 1).to_list(2000)
     return [doc_to_json(x) for x in data]
 
@@ -431,7 +431,7 @@ async def delete_product(pid: str, _a: dict = Depends(require_admin)):
 
 # ---------- Purchases ----------
 @api.get("/purchases")
-async def list_purchases(_u: dict = Depends(get_current_user)):
+async def list_purchases(_u: dict = Depends(require_admin)):
     data = await db.purchases.find({}).sort("created_at", -1).to_list(2000)
     return [doc_to_json(p) for p in data]
 
@@ -706,7 +706,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
 
 # ---------- Payments (debt settlement) ----------
 @api.get("/payments")
-async def list_payments(_u: dict = Depends(get_current_user)):
+async def list_payments(_u: dict = Depends(require_admin)):
     data = await db.payments.find({}).sort("created_at", -1).to_list(2000)
     return [doc_to_json(p) for p in data]
 

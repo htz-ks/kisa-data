@@ -1,0 +1,43 @@
+# PRD — Prodata Stock & POS
+
+## Original Problem
+Albanian user owns a phone & accessories store and wants a stock/POS management program similar to Prodata.
+
+## User Choices (2026-10-17)
+- Full featured: products + categories + stock + purchases + sales + supplier/customer debts + reports
+- JWT auth with admin + employee roles
+- IMEI tracking per phone
+- Currency: EUR
+- Downloadable PDF invoices
+
+## Personas
+- **Admin (owner)** — full access: products, categories, suppliers, purchases, customers, POS, invoices, payments/debts, reports, users
+- **Punonjës (employee)** — POS/sales, product lookup, customers, invoices (read)
+
+## Core Architecture
+- Backend: FastAPI + MongoDB (motor), JWT auth (bcrypt + PyJWT), reportlab for PDF
+- Frontend: React 19, Tailwind, shadcn/ui, recharts, framer motion, sonner toasts
+- All API under `/api`; Mongo accessed via `MONGO_URL` / `DB_NAME`; frontend uses `REACT_APP_BACKEND_URL`
+
+## Implemented (2026-10-17)
+- Auth: `/api/auth/login|logout|me`, admin seed, role dependency
+- CRUD: categories, suppliers, customers, products (phone with IMEI or accessory with qty), users
+- Purchases: creates stock lines, appends IMEIs, updates supplier balance by due amount
+- Sales (POS): invoice number counter, decrements stock, marks IMEI sold, cash/card/debt, discount, customer balance update
+- PDF invoice (reportlab) at `/api/sales/{id}/invoice.pdf`
+- Payments: in/out, updates customer/supplier balance
+- Reports: dashboard KPIs + 7-day chart + top products
+- Frontend: Login, Dashboard (KPIs + charts), POS (grid + cart + IMEI picker), Products, Categories, Customers, Suppliers, Purchases, Sales/Invoices, Payments, Reports, Users
+- Role-gated admin routes (categories, suppliers, purchases, payments, reports, users)
+
+## Verified
+- End-to-end tested via testing agent (iteration_1.json) — backend 95%, frontend 100%
+- Backend role enforcement tightened for suppliers/purchases/payments
+
+## Backlog / Next
+- P1: Barcode scanner input (camera + hotkey) for POS
+- P1: Export sales report to Excel/CSV
+- P2: Multi-currency (ALL + EUR) with configurable rate
+- P2: Customer purchase history drawer
+- P2: Settings page (business name, logo on invoice, tax)
+- P2: WhatsApp/SMS invoice share

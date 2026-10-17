@@ -1,0 +1,44 @@
+{
+  "summary": "Smoke tested Prodata stock/POS backend (FastAPI) and frontend (React) end-to-end using production URL. Backend auth, CRUD, purchases, sales with IMEI tracking, PDF invoice, payments, and reports work correctly. Frontend login (admin + employee), dashboard, sidebar role filtering, POS, and logout work. One backend role-enforcement gap found: employees can call GET /api/suppliers (and purchases/payments) which the problem statement says should return 403. UI, however, hides these nav items for employees so the user-facing flow is OK.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/login admin + employee return token and user; cookie set",
+    "GET /api/auth/me returns admin user (200)",
+    "POST /api/auth/logout clears cookie; subsequent /auth/me returns 401",
+    "GET /api/reports/dashboard returns stats + 7-day chart array",
+    "POST /api/categories, /api/suppliers, /api/customers create entities",
+    "POST /api/products creates accessory (quantity) and phone (imeis[] with status in_stock)",
+    "POST /api/purchases: supplier balance decremented by overpayment (-575), phone IMEIs appended (3 in stock), accessory qty increased",
+    "POST /api/sales (cash) creates invoice INV-2026-00001, totals + line items correct, phone IMEI consumed",
+    "Reselling same IMEI returns 400 'IMEI ... nuk është në stok'",
+    "Oversell accessory returns 400 'Sasia e pamjaftueshme'",
+    "GET /api/sales/{id}/invoice.pdf returns 200 application/pdf (2.6 KB, valid PDF v1.4)",
+    "POST /api/payments for customer (in) and supplier (out) succeed",
+    "POST /api/users creates new employee (admin only)",
+    "GET /api/reports/top-products returns ranked list",
+    "Frontend: admin login lands on /dashboard; stats, 7-day sales line chart and top-products bar chart render",
+    "Admin sidebar shows all 11 nav links incl. suppliers/categories/purchases/payments/reports/users",
+    "Employee sidebar correctly HIDES suppliers/categories/purchases/payments/reports/users; shows dashboard/pos/products/customers/sales",
+    "POS page loads product grid with stock badges; logout returns to /login"
+  ],
+  "failed": [
+    {
+      "area": "backend role enforcement",
+      "issue": "Employee can GET /api/suppliers (200) — problem statement requires 403. Same applies to GET /api/purchases, /api/payments, and /api/reports/dashboard (all use get_current_user instead of require_admin). Only GET /api/users is admin-protected.",
+      "evidence": "curl with employee bearer -> HTTP 200 on /api/suppliers; server.py lines 332, 434, 709, 734 use Depends(get_current_user)",
+      "priority": "MEDIUM"
+    },
+    {
+      "area": "backend routing",
+      "issue": "No /api/reports/summary endpoint (test request mentioned it). Actual endpoints are /api/reports/dashboard and /api/reports/top-products — frontend likely consumes these correctly (dashboard renders fine).",
+      "evidence": "GET /api/reports/summary -> 404; /api/reports/dashboard -> 200",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "In backend/server.py, change Depends(get_current_user) to Depends(require_admin) on list_suppliers (L332), list_purchases (L434), list_payments (L709), and dashboard (L734) if strict role enforcement at API layer is desired. Otherwise, document that read access is intentionally open and that UI gating is the enforcement."
+  ],
+  "success_rate": {"backend": "95%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
