@@ -11,9 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download, ScanLine, MessageCircle } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download, ScanLine, MessageCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import PrintMenu from "@/components/PrintMenu";
 
 export default function POSPage() {
   const [products, setProducts] = useState([]);
@@ -336,6 +337,20 @@ export default function POSPage() {
               onClick={() => downloadInvoice(doneSale.id)} data-testid="pos-download-invoice-btn">
               <Download className="w-4 h-4 mr-2" /> Shkarko Faturën PDF
             </Button>
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" onClick={() => window.open(`/print/sale/${doneSale.id}?format=a4`, "_blank", "width=900,height=1000")}
+                className="border-sky-500/40 text-sky-300 hover:bg-sky-500/10" data-testid="pos-print-a4-btn">
+                <Printer className="w-3.5 h-3.5 mr-1" /> A4
+              </Button>
+              <Button variant="outline" onClick={() => window.open(`/print/sale/${doneSale.id}?format=80`, "_blank", "width=420,height=640")}
+                className="border-sky-500/40 text-sky-300 hover:bg-sky-500/10" data-testid="pos-print-80-btn">
+                <Printer className="w-3.5 h-3.5 mr-1" /> 80mm
+              </Button>
+              <Button variant="outline" onClick={() => window.open(`/print/sale/${doneSale.id}?format=58`, "_blank", "width=360,height=640")}
+                className="border-sky-500/40 text-sky-300 hover:bg-sky-500/10" data-testid="pos-print-58-btn">
+                <Printer className="w-3.5 h-3.5 mr-1" /> 58mm
+              </Button>
+            </div>
             {(() => {
               const cust = customers.find((c) => c.id === doneSale?.customer_id);
               const phone = (cust?.phone || "").replace(/[^0-9+]/g, "");

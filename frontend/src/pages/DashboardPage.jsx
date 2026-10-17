@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import api, { eur } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
-import { Smartphone, Package, TrendingUp, AlertTriangle, Wallet, ArrowDownRight } from "lucide-react";
+import { Smartphone, Package, TrendingUp, AlertTriangle, Wallet, ArrowDownRight, Target, Award, Receipt } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Progress } from "@/components/ui/progress";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart, Bar,
@@ -30,30 +32,102 @@ function Stat({ icon: Icon, label, value, hint, color = "emerald", tid }) {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [d, setD] = useState(null);
   const [top, setTop] = useState([]);
+  const [perf, setPerf] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const [a, b] = await Promise.all([
-        api.get("/reports/dashboard"),
-        api.get("/reports/top-products"),
-      ]);
-      setD(a.data);
-      setTop(b.data);
+      const calls = [api.get("/reports/my-performance")];
+      if (isAdmin) {
+        calls.push(api.get("/reports/dashboard"), api.get("/reports/top-products"));
+      }
+      const results = await Promise.all(calls);
+      setPerf(results[0].data);
+      if (isAdmin) {
+        setD(results[1].data);
+        setTop(results[2].data);
+      }
     })();
-  }, []);
+  }, [isAdmin]);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       <PageHeader
-        title="Paneli i kontrollit"
-        subtitle="Pamje e shpejtë e biznesit tënd"
+        title={isAdmin ? "Paneli i kontrollit" : `Mirë se vjen, ${user?.name || ""}`}
+        subtitle={isAdmin ? "Pamje e shpejtë e biznesit tënd" : "Performanca jote për sot"}
         testid="dashboard-header"
       />
-      {!d ? (
+
+      {/* Personal performance panel (always) */}
+      {perf && (
+        <div className="mb-6" data-testid="my-performance-panel">
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-2">
+                <Target className="w-5 h-5 text-emerald-400" />
+                <span className="text-[10px] uppercase font-mono-pd text-slate-500">Target ditor</span>
+              </div>
+              <div className="text-2xl font-extrabold">{eur(perf.today_total)} <span className="text-sm text-slate-500 font-normal">/ {eur(perf.daily_target)}</span></div>
+              <div className="mt-3">
+                <Progress value={perf.target_progress} className="h-2 bg-slate-800" />
+                <div className="text-xs text-slate-500 mt-1.5 flex justify-between">
+                  <span>{Math.round(perf.target_progress)}% i target-it</span>
+                  {perf.target_remaining > 0 && <span className="text-amber-400">Mbetur {eur(perf.target_remaining)}</span>}
+                </div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-2">
+                <Receipt className="w-5 h-5 text-indigo-400" />
+                <span className="text-[10px] uppercase font-mono-pd text-slate-500">Fatura sot</span>
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{perf.today_count}</div>
+              <div className="text-xs text-slate-500 mt-1.5">Këtë muaj: <span className="text-slate-300">{perf.month_count}</span></div>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span className="text-[10px] uppercase font-mono-pd text-slate-500">Komision sot</span>
+              </div>
+              <div className="text-2xl font-extrabold text-amber-400">{eur(perf.today_commission)}</div>
+              <div className="text-xs text-slate-500 mt-1.5">{perf.commission_percent}% nga shitjet</div>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-2">
+                <Wallet className="w-5 h-5 text-sky-400" />
+                <span className="text-[10px] uppercase font-mono-pd text-slate-500">Komision muaj</span>
+              </div>
+              <div className="text-2xl font-extrabold text-sky-400">{eur(perf.month_commission)}</div>
+              <div className="text-xs text-slate-500 mt-1.5">Shitjet muaj: {eur(perf.month_total)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && perf && (
+        <div className="stat-card">
+          <h3 className="text-lg font-bold mb-3">Shitjet e mia të fundit</h3>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {perf.recent_sales.length === 0 && <div className="text-slate-500 text-sm py-6 text-center">Ende pa shitje. Shko te POS!</div>}
+            {perf.recent_sales.map((s) => (
+              <div key={s.id} className="flex justify-between items-center p-3 rounded-lg bg-slate-900/40 border border-slate-800">
+                <div>
+                  <div className="font-mono-pd text-emerald-400 text-sm">{s.invoice_no}</div>
+                  <div className="text-xs text-slate-500">{(s.created_at || "").slice(0, 16).replace("T", " ")} · {s.customer_name || "I rastit"}</div>
+                </div>
+                <div className="font-mono-pd font-semibold">{eur(s.total)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isAdmin && !d ? (
         <div className="text-slate-500 text-sm">Duke ngarkuar…</div>
-      ) : (
+      ) : isAdmin && d && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <Stat tid="stat-sales-today" icon={TrendingUp} label="Shitjet sot" value={eur(d.sales_today)} hint="Sot" color="emerald" />

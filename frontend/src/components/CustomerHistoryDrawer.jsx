@@ -88,6 +88,32 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
                       </Button>
                     </div>
                     <div className="text-xs text-slate-400 mt-1">{s.items?.length || 0} artikuj · {s.payment_method?.toUpperCase()}</div>
+                    {(s.items || []).some((it) => it.imei) && (
+                      <div className="mt-2 pt-2 border-t border-slate-800/60 space-y-1">
+                        {s.items.filter((it) => it.imei).map((it, i) => {
+                          const daysLeft = it.warranty_until
+                            ? Math.ceil((new Date(it.warranty_until) - new Date()) / (1000 * 60 * 60 * 24))
+                            : null;
+                          return (
+                            <div key={i} className="flex items-center justify-between text-xs" data-testid={`history-imei-${it.imei}`}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate text-slate-300">{it.product_name}</span>
+                                <span className="imei-badge shrink-0">{it.imei}</span>
+                              </div>
+                              {daysLeft !== null && (
+                                <span className={`shrink-0 font-mono-pd text-[10px] px-2 py-0.5 rounded-full border ${
+                                  daysLeft > 30 ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" :
+                                  daysLeft > 0 ? "text-amber-400 border-amber-500/40 bg-amber-500/10" :
+                                  "text-red-400 border-red-500/40 bg-red-500/10"
+                                }`}>
+                                  {daysLeft > 0 ? `${daysLeft} ditë garanci` : "Garancia skaduar"}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

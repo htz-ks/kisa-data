@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const EMPTY = { email: "", password: "", name: "", role: "employee" };
+const EMPTY = { email: "", password: "", name: "", role: "employee", daily_target: 0, commission_percent: 0 };
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -26,7 +26,7 @@ export default function UsersPage() {
 
   const save = async () => {
     try {
-      await api.post("/users", form);
+      await api.post("/users", { ...form, daily_target: Number(form.daily_target) || 0, commission_percent: Number(form.commission_percent) || 0 });
       toast.success("Përdoruesi u shtua");
       setOpen(false); setForm(EMPTY);
       await load();
@@ -43,7 +43,7 @@ export default function UsersPage() {
       <div className="data-grid bg-[#0D131E]">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wider text-slate-500 font-mono-pd border-b border-slate-800">
-            <tr><th className="px-4 py-3">Emri</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Roli</th><th className="px-4 py-3 text-right">Veprime</th></tr>
+            <tr><th className="px-4 py-3">Emri</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Roli</th><th className="px-4 py-3 text-right">Target ditor</th><th className="px-4 py-3 text-right">Komision %</th><th className="px-4 py-3 text-right">Veprime</th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -51,6 +51,8 @@ export default function UsersPage() {
                 <td className="px-4 py-3 font-medium">{u.name}</td>
                 <td className="px-4 py-3 font-mono-pd text-slate-300">{u.email}</td>
                 <td className="px-4 py-3"><Badge variant="outline" className={u.role === "admin" ? "border-emerald-500/40 text-emerald-300" : "border-indigo-500/40 text-indigo-300"}>{u.role}</Badge></td>
+                <td className="px-4 py-3 text-right font-mono-pd text-slate-300">€ {Number(u.daily_target || 0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right font-mono-pd text-slate-300">{Number(u.commission_percent || 0).toFixed(1)}%</td>
                 <td className="px-4 py-3 text-right">
                   <Button variant="ghost" size="sm" onClick={() => del(u.id)} className="text-red-400"><Trash2 className="w-3.5 h-3.5" /></Button>
                 </td>
@@ -73,6 +75,18 @@ export default function UsersPage() {
                 <SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="employee">Punonjës</SelectItem></SelectContent>
               </Select>
             </div>
+            {form.role === "employee" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Target ditor (€)</Label>
+                  <Input type="number" step="0.01" value={form.daily_target} onChange={(e) => setForm({ ...form, daily_target: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" data-testid="user-target-input" />
+                </div>
+                <div>
+                  <Label>Komision %</Label>
+                  <Input type="number" step="0.1" value={form.commission_percent} onChange={(e) => setForm({ ...form, commission_percent: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" data-testid="user-commission-input" />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Anulo</Button>

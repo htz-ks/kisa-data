@@ -13,6 +13,7 @@ import SalesPage from "@/pages/SalesPage";
 import PaymentsPage from "@/pages/PaymentsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
+import PrintSalePage from "@/pages/PrintSalePage";
 
 function Protected({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -29,6 +30,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/print/sale/:id" element={<Protected><PrintSalePage /></Protected>} />
             <Route element={<Protected><AppShell /></Protected>}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />

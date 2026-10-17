@@ -105,12 +105,16 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: Literal["admin", "employee"] = "employee"
+    daily_target: float = 0.0
+    commission_percent: float = 0.0
 
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[Literal["admin", "employee"]] = None
     password: Optional[str] = None
+    daily_target: Optional[float] = None
+    commission_percent: Optional[float] = None
 
 
 class CategoryIn(BaseModel):
@@ -148,6 +152,7 @@ class ProductIn(BaseModel):
     sale_price: float = 0.0
     quantity: int = 0  # for accessories
     low_stock_threshold: int = 2
+    warranty_months: int = 12  # for phones
     imeis: List[str] = []  # for phones (adds new IMEIs)
     description: Optional[str] = ""
 
@@ -161,6 +166,7 @@ class ProductUpdate(BaseModel):
     sale_price: Optional[float] = None
     quantity: Optional[int] = None
     low_stock_threshold: Optional[int] = None
+    warranty_months: Optional[int] = None
     description: Optional[str] = None
 
 
@@ -272,6 +278,8 @@ async def create_user(body: UserCreate, _admin: dict = Depends(require_admin)):
         "password_hash": hash_password(body.password),
         "name": body.name,
         "role": body.role,
+        "daily_target": body.daily_target,
+        "commission_percent": body.commission_percent,
         "created_at": now_utc().isoformat(),
     }
     r = await db.users.insert_one(doc)
@@ -540,13 +548,19 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             found = next((x for x in imeis if x["imei"] == it.imei and x["status"] == "in_stock"), None)
             if not found:
                 raise HTTPException(400, f"IMEI {it.imei} nuk është në stok")
+            now = now_utc()
+            months = int(prod.get("warranty_months", 12) or 0)
+            warranty_until = (now + timedelta(days=months * 30)).isoformat() if months > 0 else None
             found["status"] = "sold"
+            found["sold_at"] = now.isoformat()
+            found["warranty_until"] = warranty_until
             await db.products.update_one(
                 {"_id": ObjectId(it.product_id)},
                 {"$set": {"imeis": imeis,
                           "quantity": len([x for x in imeis if x["status"] == "in_stock"])}},
             )
             qty = 1
+            warranty_info = {"warranty_months": months, "warranty_until": warranty_until}
         else:
             if prod.get("quantity", 0) < it.quantity:
                 raise HTTPException(400, f"Sasia e pamjaftueshme për {prod['name']}")
@@ -555,6 +569,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
                 {"$inc": {"quantity": -it.quantity}},
             )
             qty = it.quantity
+            warranty_info = {}
 
         line_total = it.sale_price * qty
         subtotal += line_total
@@ -567,6 +582,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             "sale_price": it.sale_price,
             "cost_price": prod.get("cost_price", 0),
             "line_total": line_total,
+            **warranty_info,
         })
 
     discount = max(0.0, body.discount or 0.0)
@@ -786,6 +802,46 @@ async def dashboard(_u: dict = Depends(get_current_user)):
         "customer_debt": cust_debt[0]["total"] if cust_debt else 0,
         "supplier_debt": supp_debt[0]["total"] if supp_debt else 0,
         "chart_7d": chart,
+    }
+
+
+@api.get("/reports/my-performance")
+async def my_performance(user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).date()
+    today_start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc).isoformat()
+    month_start = datetime(today.year, today.month, 1, tzinfo=timezone.utc).isoformat()
+
+    uid = user["id"]
+    full = await db.users.find_one({"_id": ObjectId(uid)})
+    target = float((full or {}).get("daily_target", 0) or 0)
+    commission_pct = float((full or {}).get("commission_percent", 0) or 0)
+
+    today_sales = await db.sales.aggregate([
+        {"$match": {"created_by": uid, "created_at": {"$gte": today_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}},
+    ]).to_list(1)
+    month_sales = await db.sales.aggregate([
+        {"$match": {"created_by": uid, "created_at": {"$gte": month_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}},
+    ]).to_list(1)
+    recent = await db.sales.find({"created_by": uid}).sort("created_at", -1).limit(10).to_list(10)
+
+    today_total = today_sales[0]["total"] if today_sales else 0
+    month_total = month_sales[0]["total"] if month_sales else 0
+    progress = (today_total / target * 100.0) if target > 0 else 0
+
+    return {
+        "daily_target": target,
+        "commission_percent": commission_pct,
+        "today_total": today_total,
+        "today_count": today_sales[0]["count"] if today_sales else 0,
+        "today_commission": today_total * commission_pct / 100.0,
+        "month_total": month_total,
+        "month_count": month_sales[0]["count"] if month_sales else 0,
+        "month_commission": month_total * commission_pct / 100.0,
+        "target_progress": min(100, progress),
+        "target_remaining": max(0, target - today_total),
+        "recent_sales": [doc_to_json(s) for s in recent],
     }
 
 

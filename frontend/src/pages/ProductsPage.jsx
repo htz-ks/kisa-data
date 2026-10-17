@@ -18,7 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const EMPTY = {
   name: "", type: "accessory", brand: "", category_id: "", barcode: "",
-  cost_price: 0, sale_price: 0, quantity: 0, low_stock_threshold: 2, imeis: [], description: "",
+  cost_price: 0, sale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12, imeis: [], description: "",
 };
 
 export default function ProductsPage() {
@@ -59,6 +59,7 @@ export default function ProductsPage() {
       sale_price: p.sale_price || 0,
       quantity: p.quantity || 0,
       low_stock_threshold: p.low_stock_threshold || 2,
+      warranty_months: p.warranty_months ?? 12,
       imeis: [],
       description: p.description || "",
     });
@@ -74,6 +75,7 @@ export default function ProductsPage() {
         sale_price: Number(form.sale_price) || 0,
         quantity: Number(form.quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 0,
+        warranty_months: Number(form.warranty_months) || 0,
       };
       if (editId) {
         delete payload.imeis;
@@ -268,6 +270,13 @@ export default function ProductsPage() {
               <Input type="number" value={form.low_stock_threshold} onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })}
                 className="mt-1 bg-slate-900 border-slate-800" data-testid="product-threshold-input" />
             </div>
+            {form.type === "phone" && (
+              <div>
+                <Label>Garanci (muaj)</Label>
+                <Input type="number" value={form.warranty_months} onChange={(e) => setForm({ ...form, warranty_months: e.target.value })}
+                  className="mt-1 bg-slate-900 border-slate-800" data-testid="product-warranty-input" />
+              </div>
+            )}
 
             {form.type === "phone" && !editId && (
               <div className="col-span-2">

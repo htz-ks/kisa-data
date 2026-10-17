@@ -7,6 +7,7 @@ import { Download, Eye, MessageCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import PrintMenu from "@/components/PrintMenu";
 
 function waLinkFor(sale, customers) {
   const cust = customers.find((c) => c.id === sale.customer_id);
@@ -62,6 +63,7 @@ export default function SalesPage() {
                 <td className="px-4 py-3 text-right">
                   <Button variant="ghost" size="sm" onClick={() => setView(s)} data-testid={`sale-view-${s.id}`}><Eye className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank")} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
+                  <PrintMenu saleId={s.id} size="icon" testid={`sale-print-${s.id}`} />
                   <Button variant="ghost" size="sm" onClick={() => window.open(waLinkFor(s, customers), "_blank")} className="text-green-400" data-testid={`sale-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></Button>
                 </td>
               </tr>
