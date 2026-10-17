@@ -1,0 +1,127 @@
+{
+  "project_title": "Prodata Phone & Accessories Stock Management & POS System",
+  "archetype": "Swiss Tactical Precision & Old Money Tech",
+  "theme_strategy": {
+    "default_mode": "dark",
+    "theme_switchable": true,
+    "dark_bg": "#0B0F17",
+    "dark_surface": "#141C2B",
+    "dark_border": "#233044",
+    "light_bg": "#F8FAFC",
+    "light_surface": "#FFFFFF",
+    "light_border": "#E2E8F0"
+  },
+  "responsive": {
+    "breakpoint": "mobile-first",
+    "layout": "Mobile-first single column stacked view reflowing to multi-column grid on md/lg. POS live cart transforms into bottom sheet drawer on mobile and sticky side panel on desktop. Fast access grid buttons on mobile home.",
+    "typography": "Fluid rem scaling. Headings adapt from text-2xl on mobile up to text-4xl/5xl on desktop. Inputs maintain minimum 16px (1rem) font size on mobile to prevent browser zoom.",
+    "overflow_guard": "Strict overflow-x-hidden on root and table wrappers with horizontal scroll indicators for data tables.",
+    "tap_targets": "Minimum 44px x 44px touch targets for all interactive buttons, quantity selectors, barcode scanners, and IMEI pill buttons."
+  },
+  "typography": {
+    "heading_font": "Outfit, sans-serif",
+    "body_font": "Plus Jakarta Sans, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "scale": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight",
+      "h2": "text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight",
+      "h3": "text-lg sm:text-xl font-semibold tracking-normal",
+      "h4": "text-base sm:text-lg font-medium",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "caption": "text-xs font-mono uppercase tracking-widest text-slate-400"
+    }
+  },
+  "colors": {
+    "primary": {
+      "emerald": "#10B981",
+      "emerald_hover": "#059669",
+      "indigo": "#6366F1",
+      "indigo_hover": "#4F46E5"
+    },
+    "status": {
+      "danger_low_stock": "#EF4444",
+      "warning_debt": "#F59E0B",
+      "success_paid": "#10B981",
+      "info_phone_imei": "#3B82F6"
+    },
+    "neutrals_dark": {
+      "bg": "#0B0F17",
+      "card": "#141C2B",
+      "card_hover": "#1D283A",
+      "border": "#233044",
+      "text_main": "#F1F5F9",
+      "text_muted": "#94A3B8"
+    },
+    "neutrals_light": {
+      "bg": "#F8FAFC",
+      "card": "#FFFFFF",
+      "card_hover": "#F1F5F9",
+      "border": "#E2E8F0",
+      "text_main": "#0F172A",
+      "text_muted": "#64748B"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-md bg-slate-900/80 border border-slate-800/80 (Dark) or backdrop-blur-md bg-white/80 border border-slate-200 (Light)",
+    "shadows": "shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] for modals and checkout panels",
+    "borders": "1px solid crisp border using #233044 in dark mode and #E2E8F0 in light mode",
+    "imei_badge_style": "Font-mono text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30"
+  },
+  "component_name": "ProdataPOSDashboard",
+  "grids": {
+    "dashboard_mode": "MODE B: High Density Data Grid (grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4)",
+    "pos_mode": "2-Column Split POS Screen (Left 70% Product Search & Grid, Right 30% Cart & Checkout on Desktop; Stacked with Slide-over Drawer on Mobile)"
+  },
+  "layouts": {
+    "sidebar": "Collapsible vertical navigation bar with active route highlighting, store identity header, and quick sales trigger.",
+    "topbar": "Search bar with barcode scan keyboard shortcut, active user role badge (Admin/Employee), currency indicator (EUR), debt alerts indicator, and quick theme toggle.",
+    "pos_terminal": "Instant filtering by Category (Phones vs Accessories), Brand (Apple, Samsung, Xiaomi), IMEI search bar, and live quantity calculator."
+  },
+  "motion": {
+    "page_transitions": "Framer motion opacity 0.2s, y-axis shift 8px",
+    "cart_add_animation": "Micro scale pulse 1.05x on button click + toast confirmation via Sonner",
+    "reduced_motion": "Respect prefers-reduced-motion with instant fallback opacity transitions"
+  },
+  "accessibility": {
+    "apca_contrast": "High contrast compliance (minimum 4.5:1 text vs card background)",
+    "focus_states": "ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-900",
+    "test_ids": "Mandatory data-testid on every interactive element and data cell"
+  },
+  "media": {
+    "hero_phone_store": "https://images.pexels.com/photos/28919443/pexels-photo-28919443.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "high_tech_display": "https://images.pexels.com/photos/11297769/pexels-photo-11297769.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "3d_libraries": {
+    "canvas_decorations": "Lucide react icons + optional subtle tsParticles / geometric subtle grid background canvas"
+  },
+  "image_urls": [
+    {
+      "category": "smartphone_showcase",
+      "description": "Modern smartphone showcased in a tech store setting",
+      "url": "https://images.pexels.com/photos/28919443/pexels-photo-28919443.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    },
+    {
+      "category": "tech_store_interior",
+      "description": "Sleek interior of a high-tech store showcasing mobile devices and accessories",
+      "url": "https://images.pexels.com/photos/11297769/pexels-photo-11297769.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    }
+  ],
+  "instructions_to_main_agent": [
+    "Ensure complete responsive mobile-first UI for phone and accessories store stock management.",
+    "Provide a full-featured POS / Sales screen where employees can select phones by unique IMEI or accessories by quantity, attach customer info, select payment method (Cash, Card, Debt/Kredi), and generate downloadable PDF invoices in EUR.",
+    "Implement clear role-based UI for Admin and Employee (Admin accesses reports, profit margins, debt settlement, employee management, settings; Employee handles POS sales, stock lookup, customer registration).",
+    "Include IMEI tracking section inside product creation & inventory tables with search, filter, and barcode capabilities.",
+    "Make sure all interactive and key data display elements include kebab-case data-testid attributes (e.g. data-testid='pos-checkout-btn', data-testid='product-imei-input', data-testid='sales-total-value').",
+    "Use Sonner for toast notifications on item addition, inventory updates, and debt status changes.",
+    "Use currency formatted in EUR (€) across all views."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Never use pure black #000000 or default raw blue. Always use tinted high-contrast neutrals with emerald and indigo accents.",
+    "Ensure all forms use Shadcn inputs, selects, dialogs, and popovers with explicit hover/focus text colors.",
+    "Add explicit data-testid attributes to all buttons, tabs, inputs, cards, and modal triggers.",
+    "Mobile layout must stack gracefully into single column with tap targets at least 44px height."
+  ]
+},
+  "overwrite": true,
+  "path": "/app/design_guidelines.json"
+}
