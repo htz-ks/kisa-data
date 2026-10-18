@@ -63,7 +63,7 @@ export default function DashboardPage() {
               <Smartphone className="w-14 h-14 text-slate-900" strokeWidth={2.5} />
             </div>
             <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tight bg-gradient-to-br from-slate-100 to-slate-400 bg-clip-text text-transparent">
-              PRODATA
+              KISA-DATA
             </h1>
             <div className="mt-3 text-sm font-mono-pd uppercase tracking-[0.4em] text-emerald-400">
               Stock · POS · Phones

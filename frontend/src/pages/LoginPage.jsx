@@ -38,7 +38,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
               <Smartphone className="w-5 h-5 text-slate-900" />
             </div>
-            <span className="text-2xl font-extrabold tracking-tight">PRODATA</span>
+            <span className="text-2xl font-extrabold tracking-tight">KISA-DATA</span>
           </div>
           <div className="space-y-4">
             <h1 className="text-5xl font-extrabold tracking-tight leading-tight">
@@ -64,7 +64,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
               <Smartphone className="w-5 h-5 text-slate-900" />
             </div>
-            <span className="text-2xl font-extrabold">PRODATA</span>
+            <span className="text-2xl font-extrabold">KISA-DATA</span>
           </div>
           <h2 className="text-3xl font-bold mb-2">Mirë se vjen</h2>
           <p className="text-slate-400 mb-8 text-sm">Hyr në panelin tënd për të vazhduar.</p>

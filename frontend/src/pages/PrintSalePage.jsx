@@ -55,7 +55,7 @@ export default function PrintSalePage() {
           <button onClick={() => window.close()} style={{ padding: "6px 10px" }}>Mbyll</button>
           <span style={{ fontSize: 11 }}>Format: {format}mm</span>
         </div>
-        <div className="center b" style={{ fontSize: 14 }}>PRODATA</div>
+        <div className="center b" style={{ fontSize: 14 }}>KISA-DATA</div>
         <div className="center" style={{ fontSize: 10 }}>Faturë Shitjeje</div>
         <div className="hr" />
         <div className="row"><span>Nr.</span><span className="b">{sale.invoice_no}</span></div>
@@ -90,7 +90,7 @@ export default function PrintSalePage() {
         {sale.due_amount > 0 && <div className="row b"><span>Borxh</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         <div className="hr" />
         <div className="center" style={{ fontSize: 10 }}>Faleminderit për blerjen!</div>
-        <div className="center" style={{ fontSize: 9, marginTop: 8 }}>Prodata POS · {new Date().toLocaleDateString()}</div>
+        <div className="center" style={{ fontSize: 9, marginTop: 8 }}>Kisa-Data POS · {new Date().toLocaleDateString()}</div>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function PrintSalePage() {
       <div className="wrap">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 10 }}>
           <div>
-            <div className="brand">PRODATA</div>
+            <div className="brand">KISA-DATA</div>
             <div className="muted">Faturë Shitjeje / Sales Invoice</div>
           </div>
           <div className="box" style={{ minWidth: 200 }}>
@@ -167,7 +167,7 @@ export default function PrintSalePage() {
           {sale.due_amount > 0 && <div className="row" style={{ color: "#D97706", fontWeight: 700 }}><span>Mbetur</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         </div>
         <div style={{ marginTop: 40, fontSize: 11, color: "#64748B", textAlign: "center" }}>
-          Faleminderit për blerjen! — Prodata POS
+          Faleminderit për blerjen! — Kisa-Data POS
         </div>
       </div>
     </div>

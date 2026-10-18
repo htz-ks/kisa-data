@@ -15,7 +15,7 @@ function waLinkFor(sale, customers) {
   const cust = customers.find((c) => c.id === sale.customer_id);
   const phone = (cust?.phone || "").replace(/[^0-9+]/g, "");
   const msg = encodeURIComponent(
-    `Përshëndetje${cust ? " " + cust.name : ""}!\n\nFatura: ${sale.invoice_no}\nTotali: € ${(sale.total || 0).toFixed(2)}\nBorxh: € ${(sale.due_amount || 0).toFixed(2)}\n\nFaleminderit - Prodata Shop`
+    `Përshëndetje${cust ? " " + cust.name : ""}!\n\nFatura: ${sale.invoice_no}\nTotali: € ${(sale.total || 0).toFixed(2)}\nBorxh: € ${(sale.due_amount || 0).toFixed(2)}\n\nFaleminderit - Kisa-Data`
   );
   return phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
 }

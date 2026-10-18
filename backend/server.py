@@ -656,7 +656,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     body = styles["Normal"]
 
     story = []
-    story.append(Paragraph("PRODATA", title_style))
+    story.append(Paragraph("KISA-DATA", title_style))
     story.append(Paragraph("Faturë Shitjeje / Sales Invoice", small))
     story.append(Spacer(1, 8))
 
@@ -719,7 +719,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     ]))
     story.append(tot_tbl)
     story.append(Spacer(1, 20))
-    story.append(Paragraph("Faleminderit për blerjen! — Prodata POS", small))
+    story.append(Paragraph("Faleminderit për blerjen! — Kisa-Data POS", small))
 
     doc.build(story)
     buf.seek(0)

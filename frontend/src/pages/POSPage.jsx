@@ -355,7 +355,7 @@ export default function POSPage() {
               const cust = customers.find((c) => c.id === doneSale?.customer_id);
               const phone = (cust?.phone || "").replace(/[^0-9+]/g, "");
               const msg = encodeURIComponent(
-                `Përshëndetje${cust ? " " + cust.name : ""}! Faleminderit për blerjen.\n\nFatura: ${doneSale?.invoice_no}\nTotali: € ${(doneSale?.total || 0).toFixed(2)}\nPaguar: € ${(doneSale?.paid_amount || 0).toFixed(2)}\nBorxh: € ${(doneSale?.due_amount || 0).toFixed(2)}\n\nProdata Shop`
+                `Përshëndetje${cust ? " " + cust.name : ""}! Faleminderit për blerjen.\n\nFatura: ${doneSale?.invoice_no}\nTotali: € ${(doneSale?.total || 0).toFixed(2)}\nPaguar: € ${(doneSale?.paid_amount || 0).toFixed(2)}\nBorxh: € ${(doneSale?.due_amount || 0).toFixed(2)}\n\nKisa-Data`
               );
               const href = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
               return (

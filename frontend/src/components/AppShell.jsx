@@ -42,7 +42,7 @@ export default function AppShell() {
             <Smartphone className="w-4 h-4 text-slate-900" />
           </div>
           <div>
-            <div className="font-extrabold tracking-tight">PRODATA</div>
+            <div className="font-extrabold tracking-tight">KISA-DATA</div>
             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono-pd">Stock & POS</div>
           </div>
         </div>
