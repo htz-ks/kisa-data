@@ -3,11 +3,13 @@ import api, { eur, API } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Eye, MessageCircle } from "lucide-react";
+import { Download, Eye, MessageCircle, Undo2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import PrintMenu from "@/components/PrintMenu";
+import ReturnDialog from "@/components/ReturnDialog";
+import { useAuth } from "@/context/AuthContext";
 
 function waLinkFor(sale, customers) {
   const cust = customers.find((c) => c.id === sale.customer_id);
@@ -19,11 +21,15 @@ function waLinkFor(sale, customers) {
 }
 
 export default function SalesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [sales, setSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [view, setView] = useState(null);
+  const [returnFor, setReturnFor] = useState(null);
+  const load = () => { api.get("/sales").then(({ data }) => setSales(data)); };
   useEffect(() => {
-    api.get("/sales").then(({ data }) => setSales(data));
+    load();
     api.get("/customers").then(({ data }) => setCustomers(data));
   }, []);
 
@@ -46,7 +52,11 @@ export default function SalesPage() {
           <tbody>
             {sales.map((s) => (
               <tr key={s.id} className="border-b border-slate-800/50 hover:bg-slate-800/30" data-testid={`sale-row-${s.id}`}>
-                <td className="px-4 py-3 font-mono-pd text-emerald-400">{s.invoice_no}</td>
+                <td className="px-4 py-3 font-mono-pd text-emerald-400">
+                  {s.invoice_no}
+                  {s.status === "returned" && <Badge variant="outline" className="ml-2 border-red-500/40 text-red-300 text-[9px]">KTHYER</Badge>}
+                  {s.status === "partial_return" && <Badge variant="outline" className="ml-2 border-amber-500/40 text-amber-300 text-[9px]">PJESËRISHT</Badge>}
+                </td>
                 <td className="px-4 py-3 font-mono-pd text-xs text-slate-400">{(s.created_at || "").slice(0, 16).replace("T", " ")}</td>
                 <td className="px-4 py-3">{s.customer_name || "Klient i rastit"}</td>
                 <td className="px-4 py-3">
@@ -65,6 +75,11 @@ export default function SalesPage() {
                   <Button variant="ghost" size="sm" onClick={() => window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank")} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
                   <PrintMenu saleId={s.id} size="icon" testid={`sale-print-${s.id}`} />
                   <Button variant="ghost" size="sm" onClick={() => window.open(waLinkFor(s, customers), "_blank")} className="text-green-400" data-testid={`sale-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></Button>
+                  {isAdmin && s.status !== "returned" && (
+                    <Button variant="ghost" size="sm" onClick={() => setReturnFor(s.id)} className="text-amber-400" data-testid={`sale-return-${s.id}`}>
+                      <Undo2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -120,6 +135,8 @@ export default function SalesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ReturnDialog saleId={returnFor} onClose={() => setReturnFor(null)} onDone={load} />
     </div>
   );
 }

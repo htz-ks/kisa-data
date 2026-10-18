@@ -14,6 +14,7 @@ import PaymentsPage from "@/pages/PaymentsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
 import PrintSalePage from "@/pages/PrintSalePage";
+import ReturnsPage from "@/pages/ReturnsPage";
 
 function Protected({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ function App() {
               <Route path="/purchases" element={<Protected adminOnly><PurchasesPage /></Protected>} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/payments" element={<Protected adminOnly><PaymentsPage /></Protected>} />
+              <Route path="/returns" element={<Protected adminOnly><ReturnsPage /></Protected>} />
               <Route path="/reports" element={<Protected adminOnly><ReportsPage /></Protected>} />
               <Route path="/users" element={<Protected adminOnly><UsersPage /></Protected>} />
             </Route>

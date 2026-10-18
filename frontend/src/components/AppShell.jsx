@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
-  FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard
+  FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, Undo2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -17,6 +17,7 @@ const NAV = [
   { to: "/purchases", icon: FileText, label: "Blerjet", roles: ["admin"], tid: "nav-purchases" },
   { to: "/sales", icon: Receipt, label: "Faturat", roles: ["admin", "employee"], tid: "nav-sales" },
   { to: "/payments", icon: CreditCard, label: "Pagesa / Borxhe", roles: ["admin"], tid: "nav-payments" },
+  { to: "/returns", icon: Undo2, label: "Rikthimet", roles: ["admin"], tid: "nav-returns" },
   { to: "/reports", icon: BarChart3, label: "Raportet", roles: ["admin"], tid: "nav-reports" },
   { to: "/users", icon: UserCog, label: "Përdoruesit", roles: ["admin"], tid: "nav-users" },
 ];

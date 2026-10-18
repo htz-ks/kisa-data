@@ -208,6 +208,16 @@ class PaymentIn(BaseModel):
     notes: Optional[str] = ""
 
 
+class ReturnItem(BaseModel):
+    index: int  # index in sale.items
+    quantity: int = 1
+
+
+class ReturnIn(BaseModel):
+    items: List[ReturnItem]
+    reason: Optional[str] = ""
+
+
 # ---------- Auth dependency ----------
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
@@ -742,6 +752,125 @@ async def create_payment(body: PaymentIn, user: dict = Depends(get_current_user)
     await collection.update_one(
         {"_id": ObjectId(body.entity_id)}, {"$inc": {"balance": delta}}
     )
+    return doc_to_json(doc)
+
+
+# ---------- Returns ----------
+@api.get("/returns")
+async def list_returns(_a: dict = Depends(require_admin)):
+    data = await db.returns.find({}).sort("created_at", -1).to_list(2000)
+    return [doc_to_json(r) for r in data]
+
+
+@api.post("/sales/{sid}/return")
+async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_admin)):
+    sale = await db.sales.find_one({"_id": ObjectId(sid)})
+    if not sale:
+        raise HTTPException(404, "Shitja nuk u gjet")
+
+    items = sale.get("items", []) or []
+    returned_items = []
+    refund_total = 0.0
+
+    for ret in body.items:
+        if ret.index < 0 or ret.index >= len(items):
+            raise HTTPException(400, "Artikull i pavlefshëm")
+        item = items[ret.index]
+        already_returned = int(item.get("returned_quantity", 0) or 0)
+        available = int(item.get("quantity", 0)) - already_returned
+        if available <= 0:
+            continue
+        qty = min(int(ret.quantity), available)
+        if qty <= 0:
+            continue
+
+        # restore stock
+        prod = await db.products.find_one({"_id": ObjectId(item["product_id"])})
+        if prod:
+            if item.get("product_type") == "phone" and item.get("imei"):
+                imeis = prod.get("imeis", []) or []
+                for x in imeis:
+                    if x["imei"] == item["imei"]:
+                        x["status"] = "in_stock"
+                        x.pop("sold_at", None)
+                        x.pop("warranty_until", None)
+                        break
+                await db.products.update_one(
+                    {"_id": ObjectId(item["product_id"])},
+                    {"$set": {"imeis": imeis,
+                              "quantity": len([x for x in imeis if x["status"] == "in_stock"])}},
+                )
+            else:
+                await db.products.update_one(
+                    {"_id": ObjectId(item["product_id"])},
+                    {"$inc": {"quantity": qty}},
+                )
+
+        item["returned_quantity"] = already_returned + qty
+        line_refund = float(item.get("sale_price", 0)) * qty
+        refund_total += line_refund
+        returned_items.append({
+            "product_id": item["product_id"],
+            "product_name": item.get("product_name", ""),
+            "imei": item.get("imei"),
+            "quantity": qty,
+            "sale_price": item.get("sale_price", 0),
+            "line_refund": line_refund,
+        })
+
+    if not returned_items:
+        raise HTTPException(400, "Asgjë për t'u kthyer")
+
+    # reverse payment: reduce customer debt first (if any), rest = cash refund out
+    debt_reduction = 0.0
+    cash_refund = refund_total
+    if sale.get("customer_id") and float(sale.get("due_amount", 0) or 0) > 0:
+        remaining_due = min(float(sale["due_amount"]), refund_total)
+        debt_reduction = remaining_due
+        cash_refund = refund_total - remaining_due
+        new_due = float(sale["due_amount"]) - remaining_due
+        sale["due_amount"] = new_due
+        # reduce customer balance
+        await db.customers.update_one(
+            {"_id": ObjectId(sale["customer_id"])}, {"$inc": {"balance": -remaining_due}}
+        )
+
+    # update sale document (items with returned_quantity, totals)
+    returned_sum = sum(
+        float(i.get("sale_price", 0)) * int(i.get("returned_quantity", 0) or 0)
+        for i in items
+    )
+    original_subtotal = float(sale.get("subtotal", 0) or 0)
+    fully_returned = all(
+        int(i.get("returned_quantity", 0) or 0) >= int(i.get("quantity", 0))
+        for i in items
+    )
+    await db.sales.update_one(
+        {"_id": ObjectId(sid)},
+        {"$set": {
+            "items": items,
+            "returned_total": returned_sum,
+            "due_amount": sale.get("due_amount", 0),
+            "status": "returned" if fully_returned else "partial_return",
+        }},
+    )
+
+    doc = {
+        "sale_id": sid,
+        "invoice_no": sale.get("invoice_no", ""),
+        "customer_id": sale.get("customer_id"),
+        "customer_name": sale.get("customer_name", ""),
+        "items": returned_items,
+        "refund_total": refund_total,
+        "debt_reduction": debt_reduction,
+        "cash_refund": cash_refund,
+        "reason": body.reason,
+        "created_at": now_utc().isoformat(),
+        "created_by": user["id"],
+        "created_by_name": user.get("name", ""),
+    }
+    r = await db.returns.insert_one(doc)
+    doc["_id"] = r.inserted_id
     return doc_to_json(doc)
 
 
