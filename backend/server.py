@@ -135,6 +135,7 @@ class CustomerIn(BaseModel):
     email: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    credit_limit: float = 0.0
 
 
 class IMEIItem(BaseModel):
@@ -200,6 +201,8 @@ class SaleIn(BaseModel):
     paid_amount: float = 0.0
     payment_method: Literal["cash", "card", "debt"] = "cash"
     notes: Optional[str] = ""
+    document_date: Optional[str] = None
+    due_date: Optional[str] = None
 
 
 class PaymentIn(BaseModel):
@@ -626,6 +629,8 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
         "paid_amount": paid,
         "due_amount": due,
         "payment_method": body.payment_method,
+        "document_date": body.document_date,
+        "due_date": body.due_date,
         "notes": body.notes,
         "created_at": now_utc().isoformat(),
         "created_by": user["id"],

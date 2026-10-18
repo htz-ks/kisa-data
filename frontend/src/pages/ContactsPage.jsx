@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import CustomerHistoryDrawer from "@/components/CustomerHistoryDrawer";
 
-const EMPTY = { name: "", phone: "", email: "", address: "", notes: "" };
+const EMPTY = { name: "", phone: "", email: "", address: "", notes: "", credit_limit: 0 };
 
 export default function ContactsPage({ kind }) {
   const { user } = useAuth();
@@ -34,12 +34,13 @@ export default function ContactsPage({ kind }) {
   useEffect(() => { load(); }, [kind]);
 
   const openCreate = () => { setForm(EMPTY); setEditId(null); setOpen(true); };
-  const openEdit = (c) => { setForm({ name: c.name, phone: c.phone || "", email: c.email || "", address: c.address || "", notes: c.notes || "" }); setEditId(c.id); setOpen(true); };
+  const openEdit = (c) => { setForm({ name: c.name, phone: c.phone || "", email: c.email || "", address: c.address || "", notes: c.notes || "", credit_limit: c.credit_limit || 0 }); setEditId(c.id); setOpen(true); };
 
   const save = async () => {
     try {
-      if (editId) await api.put(`${endpoint}/${editId}`, form);
-      else await api.post(endpoint, form);
+      const payload = { ...form, credit_limit: Number(form.credit_limit) || 0 };
+      if (editId) await api.put(`${endpoint}/${editId}`, payload);
+      else await api.post(endpoint, payload);
       toast.success("U ruajt");
       setOpen(false);
       await load();
@@ -119,6 +120,11 @@ export default function ContactsPage({ kind }) {
             <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" /></div>
             <div><Label>Adresa</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" /></div>
+            {kind === "customer" && (
+              <div><Label>Limiti i kredisë (€)</Label>
+                <Input type="number" step="0.01" value={form.credit_limit} onChange={(e) => setForm({ ...form, credit_limit: e.target.value })} className="mt-1 bg-slate-900 border-slate-800" data-testid="customer-limit-input" />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Anulo</Button>

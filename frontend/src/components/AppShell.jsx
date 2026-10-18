@@ -16,7 +16,8 @@ import { Toaster } from "@/components/ui/sonner";
  */
 const NAV = [
   { key: "panel", to: "/dashboard", icon: LayoutDashboard, label: "Paneli", roles: ["admin", "employee"], tid: "nav-dashboard" },
-  { key: "pos", to: "/pos", icon: ShoppingCart, label: "POS / Shitje", roles: ["admin", "employee"], tid: "nav-pos" },
+  { key: "sale-new", to: "/sale/new", icon: Receipt, label: "Shitje e re", roles: ["admin", "employee"], tid: "nav-sale-new" },
+  { key: "pos", to: "/pos", icon: ShoppingCart, label: "POS i shpejtë", roles: ["admin", "employee"], tid: "nav-pos" },
   {
     key: "articles", icon: Boxes, label: "Artikuj", roles: ["admin", "employee"],
     children: [

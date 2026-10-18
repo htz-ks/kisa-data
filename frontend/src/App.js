@@ -15,6 +15,7 @@ import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
 import PrintSalePage from "@/pages/PrintSalePage";
 import ReturnsPage from "@/pages/ReturnsPage";
+import SaleEntryPage from "@/pages/SaleEntryPage";
 
 function Protected({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/pos" element={<POSPage />} />
+              <Route path="/sale/new" element={<SaleEntryPage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/categories" element={<Protected adminOnly><CategoriesPage /></Protected>} />
               <Route path="/customers" element={<ContactsPage kind="customer" />} />
