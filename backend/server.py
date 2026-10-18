@@ -150,6 +150,7 @@ class ProductIn(BaseModel):
     barcode: Optional[str] = ""
     cost_price: float = 0.0
     sale_price: float = 0.0
+    wholesale_price: float = 0.0
     quantity: int = 0  # for accessories
     low_stock_threshold: int = 2
     warranty_months: int = 12  # for phones
@@ -164,6 +165,7 @@ class ProductUpdate(BaseModel):
     barcode: Optional[str] = None
     cost_price: Optional[float] = None
     sale_price: Optional[float] = None
+    wholesale_price: Optional[float] = None
     quantity: Optional[int] = None
     low_stock_threshold: Optional[int] = None
     warranty_months: Optional[int] = None

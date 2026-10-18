@@ -19,7 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const EMPTY = {
   name: "", type: "accessory", brand: "", category_id: "", barcode: "",
-  cost_price: 0, sale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12, imeis: [], description: "",
+  cost_price: 0, sale_price: 0, wholesale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12, imeis: [], description: "",
 };
 
 export default function ProductsPage() {
@@ -72,6 +72,7 @@ export default function ProductsPage() {
       barcode: p.barcode || "",
       cost_price: p.cost_price || 0,
       sale_price: p.sale_price || 0,
+      wholesale_price: p.wholesale_price || 0,
       quantity: p.quantity || 0,
       low_stock_threshold: p.low_stock_threshold || 2,
       warranty_months: p.warranty_months ?? 12,
@@ -88,6 +89,7 @@ export default function ProductsPage() {
         ...form,
         cost_price: Number(form.cost_price) || 0,
         sale_price: Number(form.sale_price) || 0,
+        wholesale_price: Number(form.wholesale_price) || 0,
         quantity: Number(form.quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 0,
         warranty_months: Number(form.warranty_months) || 0,
@@ -272,9 +274,14 @@ export default function ProductsPage() {
                 className="mt-1 bg-slate-900 border-slate-800" data-testid="product-cost-input" />
             </div>
             <div>
-              <Label>Çmim shitje (€)</Label>
+              <Label>Çmim shitje me pakicë (€)</Label>
               <Input type="number" step="0.01" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
                 className="mt-1 bg-slate-900 border-slate-800" data-testid="product-price-input" />
+            </div>
+            <div>
+              <Label>Çmim shitje me shumicë (€)</Label>
+              <Input type="number" step="0.01" value={form.wholesale_price} onChange={(e) => setForm({ ...form, wholesale_price: e.target.value })}
+                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-wholesale-input" />
             </div>
             {form.type === "accessory" && (
               <div>
