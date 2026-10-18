@@ -32,8 +32,8 @@ export default function CategoriesPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1200px] mx-auto">
-      <PageHeader title="Kategoritë" subtitle="Organizo produktet në kategori"
-        action={<Button onClick={() => { setEditId(null); setName(""); setOpen(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="category-create-btn"><Plus className="w-4 h-4 mr-1" /> Shto kategori</Button>} />
+      <PageHeader title="Çmimoret" subtitle="Organizo produktet në çmimore / kategori"
+        action={<Button onClick={() => { setEditId(null); setName(""); setOpen(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="category-create-btn"><Plus className="w-4 h-4 mr-1" /> Shto çmimore</Button>} />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {list.map((c) => (
@@ -45,12 +45,12 @@ export default function CategoriesPage() {
             </div>
           </div>
         ))}
-        {list.length === 0 && <div className="col-span-full text-slate-500 text-sm text-center py-10">Pa kategori.</div>}
+        {list.length === 0 && <div className="col-span-full text-slate-500 text-sm text-center py-10">Pa çmimore.</div>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-[#141C2B] border-slate-800">
-          <DialogHeader><DialogTitle>{editId ? "Edito" : "Shto"} kategori</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Edito" : "Shto"} çmimore</DialogTitle></DialogHeader>
           <div><Label>Emri</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 bg-slate-900 border-slate-800" data-testid="category-name-input" /></div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Anulo</Button>

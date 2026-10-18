@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import api, { eur, formatApiErrorDetail } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,20 @@ export default function ProductsPage() {
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
   const [imeiInput, setImeiInput] = useState("");
+  const [sp, setSp] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Auto-open create dialog when navigated via ?new=1
+  useEffect(() => {
+    if (sp.get("new") === "1" && isAdmin) {
+      setForm(EMPTY);
+      setEditId(null);
+      setImeiInput("");
+      setOpen(true);
+      // clean up the URL param so refresh doesn't re-open
+      navigate("/products", { replace: true });
+    }
+  }, [sp, isAdmin, navigate]);
 
   const load = async () => {
     const [p, c] = await Promise.all([api.get("/products"), api.get("/categories")]);
@@ -123,12 +138,12 @@ export default function ProductsPage() {
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       <PageHeader
-        title="Produktet"
+        title="Artikujt"
         subtitle="Telefona me IMEI dhe aksesorë në sasi"
         action={isAdmin && (
           <Button onClick={openCreate} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold"
             data-testid="product-create-btn">
-            <Plus className="w-4 h-4 mr-1" /> Shto produkt
+            <Plus className="w-4 h-4 mr-1" /> Krijo Artikull
           </Button>
         )}
       />

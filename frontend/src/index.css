@@ -89,6 +89,55 @@ h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; letter-spacing: -0.01em;
 
 .data-grid { border-radius: 12px; overflow: hidden; border: 1px solid var(--app-border); }
 
+/* ===== Light content pane ===== */
+.pane-light {
+  background: #FFFFFF;
+  color: #0F172A;
+  --app-text: #0F172A;
+  --app-muted: #475569;
+}
+.pane-light .stat-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.pane-light .stat-card:hover { border-color: rgba(16, 185, 129, 0.5); }
+.pane-light .data-grid {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+}
+.pane-light table thead { background: #F8FAFC; }
+.pane-light table thead tr { border-bottom-color: #E2E8F0 !important; }
+.pane-light table thead th { color: #64748B !important; }
+.pane-light table tbody tr { border-bottom-color: #F1F5F9 !important; }
+.pane-light table tbody tr:hover { background-color: #F8FAFC !important; }
+.pane-light [class*="text-slate-100"],
+.pane-light [class*="text-slate-200"],
+.pane-light [class*="text-slate-300"] { color: #0F172A !important; }
+.pane-light [class*="text-slate-400"] { color: #475569 !important; }
+.pane-light [class*="text-slate-500"] { color: #64748B !important; }
+.pane-light [class*="bg-slate-900"] { background-color: #F8FAFC !important; }
+.pane-light [class*="bg-slate-800"] { background-color: #F1F5F9 !important; }
+.pane-light [class*="border-slate-800"] { border-color: #E2E8F0 !important; }
+.pane-light [class*="border-slate-700"] { border-color: #CBD5E1 !important; }
+.pane-light input,
+.pane-light textarea {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+.pane-light button[role="combobox"] {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+.pane-light .imei-badge {
+  background: rgba(99, 102, 241, 0.08);
+  color: #4F46E5;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
 @layer base {
     [data-debug-wrapper="true"] { display: contents !important; }
 }
