@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
   if (!isAdmin || isAdmin) {
     return (
-      <div className="min-h-[calc(100vh-2rem)] flex items-center justify-center p-6" data-testid="employee-landing">
+      <div className="-m-0 min-h-[calc(100vh-0px)] bg-[#0B0F17] text-slate-100 flex items-center justify-center p-6" data-testid="employee-landing">
         <div className="relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.18),transparent_60%)] blur-3xl" />
           <div className="relative flex flex-col items-center text-center">
