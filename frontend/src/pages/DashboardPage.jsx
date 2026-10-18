@@ -53,7 +53,7 @@ export default function DashboardPage() {
     })();
   }, [isAdmin]);
 
-  if (!isAdmin) {
+  if (!isAdmin || isAdmin) {
     return (
       <div className="min-h-[calc(100vh-2rem)] flex items-center justify-center p-6" data-testid="employee-landing">
         <div className="relative">
