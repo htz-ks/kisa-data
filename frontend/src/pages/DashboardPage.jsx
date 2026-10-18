@@ -53,6 +53,30 @@ export default function DashboardPage() {
     })();
   }, [isAdmin]);
 
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[calc(100vh-2rem)] flex items-center justify-center p-6" data-testid="employee-landing">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.18),transparent_60%)] blur-3xl" />
+          <div className="relative flex flex-col items-center text-center">
+            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 mb-8">
+              <Smartphone className="w-14 h-14 text-slate-900" strokeWidth={2.5} />
+            </div>
+            <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tight bg-gradient-to-br from-slate-100 to-slate-400 bg-clip-text text-transparent">
+              PRODATA
+            </h1>
+            <div className="mt-3 text-sm font-mono-pd uppercase tracking-[0.4em] text-emerald-400">
+              Stock · POS · Phones
+            </div>
+            <div className="mt-10 text-xs font-mono-pd uppercase tracking-widest text-slate-600">
+              v1.0
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       <PageHeader
