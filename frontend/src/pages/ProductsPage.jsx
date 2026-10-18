@@ -111,7 +111,8 @@ export default function ProductsPage() {
     setImeiInput("");
   };
 
-  const filtered = products.filter((p) => {
+  const hasFilter = !!q.trim() || typeFilter !== "all";
+  const filtered = !hasFilter ? [] : products.filter((p) => {
     const matchQ = !q || p.name.toLowerCase().includes(q.toLowerCase())
       || (p.brand || "").toLowerCase().includes(q.toLowerCase())
       || (p.barcode || "").includes(q);
@@ -197,7 +198,9 @@ export default function ProductsPage() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-12 text-center text-slate-500">Nuk ka produkte.</td></tr>
+              <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-16 text-center text-slate-500">
+                {hasFilter ? "Nuk u gjet asnjë produkt që përputhet." : `Fillo të shkruash për të kërkuar nga ${products.length} produkte, ose zgjidh një filtër.`}
+              </td></tr>
             )}
           </tbody>
         </table>
