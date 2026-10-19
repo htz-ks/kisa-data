@@ -232,8 +232,8 @@ export default function SaleEntryPage() {
                   return (
                     <tr key={i} className="border-b border-slate-200" data-testid={`sale-row-${i}`}>
                       <td className="px-1 py-1">
-                        <Input value={r._code} readOnly placeholder="—"
-                          className="h-8 bg-slate-50 border-slate-200 text-xs font-mono" />
+                        <Input value={String(i + 1).padStart(3, "0")} readOnly
+                          className="h-8 bg-slate-50 border-slate-200 text-xs font-mono text-center" data-testid={`sale-line-no-${i}`} />
                       </td>
                       <td className="px-1 py-1">
                         <Select value={r.product_id || "none"} onValueChange={(v) => pickProduct(i, v === "none" ? "" : v)}>
