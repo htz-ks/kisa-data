@@ -423,6 +423,17 @@ async def get_product(pid: str, _u: dict = Depends(get_current_user)):
     return doc_to_json(p)
 
 
+async def _next_product_code() -> str:
+    counter = await db.counters.find_one_and_update(
+        {"_id": "product_code"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter["seq"] if counter else 1
+    return f"P-{seq:05d}"
+
+
 @api.post("/products")
 async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
     doc = body.model_dump()
@@ -430,6 +441,7 @@ async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
     if doc["type"] == "phone":
         doc["imeis"] = [{"imei": i, "status": "in_stock"} for i in imei_list]
         doc["quantity"] = len(doc["imeis"])
+    doc["code"] = await _next_product_code()
     doc["created_at"] = now_utc().isoformat()
     r = await db.products.insert_one(doc)
     doc["_id"] = r.inserted_id
@@ -1087,6 +1099,9 @@ async def startup():
 
     admin_email = os.environ["ADMIN_EMAIL"].lower()
     admin_password = os.environ["ADMIN_PASSWORD"]
+    # backfill: existing products without code
+    async for p in db.products.find({"code": {"$exists": False}}):
+        await db.products.update_one({"_id": p["_id"]}, {"$set": {"code": await _next_product_code()}})
     existing = await db.users.find_one({"email": admin_email})
     if not existing:
         await db.users.insert_one({

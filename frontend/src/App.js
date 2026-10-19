@@ -16,6 +16,7 @@ import UsersPage from "@/pages/UsersPage";
 import PrintSalePage from "@/pages/PrintSalePage";
 import ReturnsPage from "@/pages/ReturnsPage";
 import SaleEntryPage from "@/pages/SaleEntryPage";
+import PrintLabelPage from "@/pages/PrintLabelPage";
 
 function Protected({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/print/sale/:id" element={<Protected><PrintSalePage /></Protected>} />
+            <Route path="/print/label/:id" element={<Protected><PrintLabelPage /></Protected>} />
             <Route element={<Protected><AppShell /></Protected>}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />

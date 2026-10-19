@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Smartphone, Box } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Smartphone, Box, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 
@@ -172,18 +172,20 @@ export default function ProductsPage() {
         <table className="w-full text-sm" data-testid="products-table">
           <thead className="text-left text-xs uppercase tracking-wider text-slate-500 font-mono-pd border-b border-slate-800">
             <tr>
+              <th className="px-4 py-3 w-24">Shifra</th>
               <th className="px-4 py-3">Produkt</th>
               <th className="px-4 py-3">Lloji</th>
               <th className="px-4 py-3">Markë</th>
               <th className="px-4 py-3 text-right">Blerje</th>
               <th className="px-4 py-3 text-right">Shitje</th>
               <th className="px-4 py-3 text-right">Stok</th>
-              {isAdmin && <th className="px-4 py-3 text-right">Veprime</th>}
+              <th className="px-4 py-3 text-right">Veprime</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((p) => (
               <tr key={p.id} className="border-b border-slate-800/50 hover:bg-slate-800/30" data-testid={`product-row-${p.id}`}>
+                <td className="px-4 py-3 font-mono-pd text-xs text-indigo-500">{p.code || "—"}</td>
                 <td className="px-4 py-3">
                   <div className="font-medium">{p.name}</div>
                   {p.barcode && <div className="text-xs text-slate-500 font-mono-pd">{p.barcode}</div>}
@@ -203,7 +205,14 @@ export default function ProductsPage() {
                   </span>
                 </td>
                 {isAdmin && (
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      const copies = window.prompt("Sa etiketa të printohen?", "1");
+                      if (!copies) return;
+                      window.open(`/print/label/${p.id}?copies=${parseInt(copies, 10) || 1}`, "_blank", "width=520,height=640");
+                    }} className="text-sky-500" data-testid={`product-label-${p.id}`} title="Printo etiketa">
+                      <Tag className="w-3.5 h-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(p)} data-testid={`product-edit-${p.id}`}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
@@ -212,10 +221,17 @@ export default function ProductsPage() {
                     </Button>
                   </td>
                 )}
+                {!isAdmin && (
+                  <td className="px-4 py-3 text-right">
+                    <Button variant="ghost" size="sm" onClick={() => window.open(`/print/label/${p.id}?copies=1`, "_blank", "width=520,height=640")} className="text-sky-500" title="Printo etiketë">
+                      <Tag className="w-3.5 h-3.5" />
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-16 text-center text-slate-500">
+              <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500">
                 {hasFilter ? "Nuk u gjet asnjë produkt që përputhet." : `Fillo të shkruash për të kërkuar nga ${products.length} produkte, ose zgjidh një filtër.`}
               </td></tr>
             )}
