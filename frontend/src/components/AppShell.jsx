@@ -24,7 +24,6 @@ const NAV = [
       { to: "/products", icon: List, label: "Artikujt", roles: ["admin", "employee"], tid: "nav-products" },
       { to: "/products?new=1", icon: PlusSquare, label: "Krijo Artikull", roles: ["admin"], tid: "nav-product-new" },
       { to: "/stock", icon: Warehouse, label: "Stoku", roles: ["admin", "employee"], tid: "nav-stock" },
-      { to: "/categories", icon: Tags, label: "Çmimoret", roles: ["admin"], tid: "nav-categories" },
     ],
   },
   {

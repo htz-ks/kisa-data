@@ -281,18 +281,6 @@ export default function ProductsPage() {
               </Select>
             </div>
             <div>
-              <Label>Kategoria</Label>
-              <Select value={form.category_id || "none"} onValueChange={(v) => setForm({ ...form, category_id: v === "none" ? "" : v })}>
-                <SelectTrigger className="mt-1 bg-slate-900 border-slate-800" data-testid="product-category-select">
-                  <SelectValue placeholder="Zgjidh" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Pa kategori —</SelectItem>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Barkod</Label>
               <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })}
                 className="mt-1 bg-slate-900 border-slate-800 font-mono-pd" data-testid="product-barcode-input" />
