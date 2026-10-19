@@ -217,6 +217,7 @@ export default function SaleEntryPage() {
                 <tr className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 border-b border-slate-300">
                   <th className="px-2 py-2 text-left w-32">Shifra</th>
                   <th className="px-2 py-2 text-left">Përshkrimi</th>
+                  <th className="px-2 py-2 text-right w-20">Stoku</th>
                   <th className="px-2 py-2 text-left w-36">IMEI</th>
                   <th className="px-2 py-2 text-right w-20">Sasia</th>
                   <th className="px-2 py-2 text-right w-28">Çmimi</th>
@@ -242,9 +243,14 @@ export default function SaleEntryPage() {
                           </SelectTrigger>
                           <SelectContent className="max-h-80">
                             <SelectItem value="none">—</SelectItem>
-                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.type === "phone" ? "Telefon" : "Aksesor"}) · Stok: {p.quantity}</SelectItem>)}
+                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                      </td>
+                      <td className="px-1 py-1 text-right font-mono text-sm pr-2">
+                        <span className={prod && prod.quantity <= (prod.low_stock_threshold || 2) ? "text-red-500" : "text-slate-700"}>
+                          {prod ? prod.quantity : "—"}
+                        </span>
                       </td>
                       <td className="px-1 py-1">
                         {r._type === "phone" ? (
