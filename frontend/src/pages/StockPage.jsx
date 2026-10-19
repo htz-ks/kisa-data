@@ -32,11 +32,26 @@ export default function StockPage() {
 
   // --- Chooser screen ---
   if (!view) {
+    const phoneValue = products.filter((p) => p.type === "phone").reduce((s, p) => s + Number(p.cost_price || 0) * Number(p.quantity || 0), 0);
+    const accValue = products.filter((p) => p.type === "accessory").reduce((s, p) => s + Number(p.cost_price || 0) * Number(p.quantity || 0), 0);
+    const totalValue = phoneValue + accValue;
+    const totalUnits = products.reduce((s, p) => s + Number(p.quantity || 0), 0);
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6" data-testid="stock-chooser">
         <div className="w-full max-w-3xl">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-center mb-2 text-slate-900">Stoku</h1>
-          <p className="text-center text-slate-500 mb-10 text-sm">Zgjidh kategorinë që dëshiron të shikosh</p>
+          <p className="text-center text-slate-500 mb-6 text-sm">Zgjidh kategorinë që dëshiron të shikosh</p>
+
+          <div className="stat-card mb-8 flex items-center justify-between p-5" data-testid="stock-total-card">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest font-mono-pd text-slate-500">Vlera totale e stokut</div>
+              <div className="text-3xl font-extrabold text-emerald-600 mt-1">{eur(totalValue)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-widest font-mono-pd text-slate-500">Njësi gjithsej</div>
+              <div className="text-3xl font-extrabold text-slate-800 mt-1">{totalUnits}</div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <button onClick={() => setView("phone")}
