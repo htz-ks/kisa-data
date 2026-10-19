@@ -19,8 +19,11 @@ import { useAuth } from "@/context/AuthContext";
 
 const EMPTY = {
   name: "", type: "accessory", brand: "", category_id: "", barcode: "",
-  cost_price: 0, sale_price: 0, wholesale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12, imeis: [], description: "",
+  cost_price: 0, sale_price: 0, wholesale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12,
+  gb: "", ram: "", battery_percent: "", imeis: [], description: "",
 };
+
+const BRANDS = ["Apple", "Samsung", "Xiaomi", "Huawei", "Nokia"];
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -76,6 +79,9 @@ export default function ProductsPage() {
       quantity: p.quantity || 0,
       low_stock_threshold: p.low_stock_threshold || 2,
       warranty_months: p.warranty_months ?? 12,
+      gb: p.gb || "",
+      ram: p.ram || "",
+      battery_percent: p.battery_percent || "",
       imeis: [],
       description: p.description || "",
     });
@@ -264,8 +270,15 @@ export default function ProductsPage() {
             </div>
             <div>
               <Label>Markë</Label>
-              <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-brand-input" />
+              <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
+                <SelectTrigger className="mt-1 bg-slate-900 border-slate-800" data-testid="product-brand-select">
+                  <SelectValue placeholder="Zgjidh markën" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Pa markë —</SelectItem>
+                  {BRANDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Kategoria</Label>
@@ -317,6 +330,25 @@ export default function ProductsPage() {
                 <Input type="number" value={form.warranty_months} onChange={(e) => setForm({ ...form, warranty_months: e.target.value })}
                   className="mt-1 bg-slate-900 border-slate-800" data-testid="product-warranty-input" />
               </div>
+            )}
+            {form.type === "phone" && (
+              <>
+                <div>
+                  <Label>Memorie (GB)</Label>
+                  <Input value={form.gb} onChange={(e) => setForm({ ...form, gb: e.target.value })}
+                    placeholder="p.sh. 128" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-gb-input" />
+                </div>
+                <div>
+                  <Label>RAM</Label>
+                  <Input value={form.ram} onChange={(e) => setForm({ ...form, ram: e.target.value })}
+                    placeholder="p.sh. 8" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-ram-input" />
+                </div>
+                <div>
+                  <Label>Bateria (%)</Label>
+                  <Input value={form.battery_percent} onChange={(e) => setForm({ ...form, battery_percent: e.target.value })}
+                    placeholder="p.sh. 95" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-battery-input" />
+                </div>
+              </>
             )}
 
             {form.type === "phone" && !editId && (

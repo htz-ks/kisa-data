@@ -60,9 +60,19 @@ export default function PrintLabelPage() {
       <div className="page-wrap">
         {labels.map((_, i) => (
           <div key={i} className="label">
-            <div className="name">{p.name}</div>
+            <div className="name">
+              {p.brand ? <span style={{ color: "#555", fontWeight: 400 }}>{p.brand} </span> : null}
+              {p.name}
+            </div>
+            {(p.gb || p.ram || p.battery_percent) && (
+              <div style={{ fontSize: 9, fontFamily: "monospace", color: "#111", display: "flex", gap: 6, justifyContent: "center" }}>
+                {p.gb && <span><b>{p.gb}</b>GB</span>}
+                {p.ram && <span>RAM <b>{p.ram}</b></span>}
+                {p.battery_percent && <span>Bat <b>{p.battery_percent}%</b></span>}
+              </div>
+            )}
             <div className="barcode-wrap" style={{ textAlign: "center" }}>
-              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={8} height={28} margin={0} />
+              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={8} height={24} margin={0} />
             </div>
             <div className="mid">
               <span className="code">{p.code || "—"}</span>

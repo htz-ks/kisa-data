@@ -155,6 +155,9 @@ class ProductIn(BaseModel):
     quantity: int = 0  # for accessories
     low_stock_threshold: int = 2
     warranty_months: int = 12  # for phones
+    gb: Optional[str] = ""
+    ram: Optional[str] = ""
+    battery_percent: Optional[str] = ""
     imeis: List[str] = []  # for phones (adds new IMEIs)
     description: Optional[str] = ""
 
@@ -170,6 +173,9 @@ class ProductUpdate(BaseModel):
     quantity: Optional[int] = None
     low_stock_threshold: Optional[int] = None
     warranty_months: Optional[int] = None
+    gb: Optional[str] = None
+    ram: Optional[str] = None
+    battery_percent: Optional[str] = None
     description: Optional[str] = None
 
 
