@@ -215,7 +215,7 @@ export default function SaleEntryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 border-b border-slate-300">
-                  <th className="px-2 py-2 text-left w-32">Kodi</th>
+                  <th className="px-2 py-2 text-left w-32">Shifra</th>
                   <th className="px-2 py-2 text-left">Përshkrimi</th>
                   <th className="px-2 py-2 text-left w-36">IMEI</th>
                   <th className="px-2 py-2 text-right w-20">Sasia</th>
