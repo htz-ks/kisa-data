@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Boxes, AlertTriangle, Package, Search } from "lucide-react";
+import { Boxes, AlertTriangle, Package, Search, Smartphone, Headphones } from "lucide-react";
 
 export default function StockPage() {
   const [products, setProducts] = useState([]);
@@ -16,15 +16,16 @@ export default function StockPage() {
   useEffect(() => { api.get("/products").then(({ data }) => setProducts(data)); }, []);
 
   const stats = useMemo(() => {
-    let value = 0, units = 0, low = 0, zero = 0;
+    let phoneValue = 0, phoneUnits = 0, accValue = 0, accUnits = 0, low = 0, zero = 0;
     products.forEach((p) => {
       const qty = Number(p.quantity || 0);
-      units += qty;
-      value += Number(p.cost_price || 0) * qty;
+      const val = Number(p.cost_price || 0) * qty;
+      if (p.type === "phone") { phoneUnits += qty; phoneValue += val; }
+      else { accUnits += qty; accValue += val; }
       if (qty <= 0) zero++;
       else if (qty <= Number(p.low_stock_threshold || 2)) low++;
     });
-    return { value, units, low, zero };
+    return { phoneValue, phoneUnits, accValue, accUnits, low, zero, totalValue: phoneValue + accValue };
   }, [products]);
 
   const filtered = products.filter((p) => {
@@ -42,21 +43,27 @@ export default function StockPage() {
     return true;
   });
 
-  const StatCard = ({ icon: Icon, label, value, color = "slate" }) => {
+  const StatCard = ({ icon: Icon, label, value, hint, color = "slate", active = false, onClick, tid }) => {
     const colors = {
       emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
       amber: "bg-amber-50 text-amber-700 border-amber-200",
       red: "bg-red-50 text-red-700 border-red-200",
       slate: "bg-slate-50 text-slate-700 border-slate-200",
     };
+    const base = `stat-card text-left transition-all ${onClick ? "cursor-pointer hover:border-emerald-500 hover:-translate-y-0.5" : ""} ${active ? "ring-2 ring-emerald-500 border-emerald-500" : ""}`;
+    const Comp = onClick ? "button" : "div";
     return (
-      <div className="stat-card">
-        <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colors[color]}`}>
-          <Icon className="w-5 h-5" />
+      <Comp type={onClick ? "button" : undefined} onClick={onClick} className={base} data-testid={tid}>
+        <div className="flex items-start justify-between">
+          <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colors[color]}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          {hint && <span className="text-[10px] uppercase font-mono-pd tracking-widest text-slate-500">{hint}</span>}
         </div>
         <div className="mt-4 text-2xl font-extrabold tracking-tight">{value}</div>
         <div className="text-xs text-slate-500 mt-0.5">{label}</div>
-      </div>
+      </Comp>
     );
   };
 
@@ -64,11 +71,23 @@ export default function StockPage() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       <PageHeader title="Stoku" subtitle="Pamje e përgjithshme e stokut dhe alarmet" testid="stock-header" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Boxes} label="Vlera totale e stokut" value={eur(stats.value)} color="emerald" />
-        <StatCard icon={Package} label="Njësi në stok" value={stats.units} color="slate" />
-        <StatCard icon={AlertTriangle} label="Stok i ulët" value={stats.low} color="amber" />
-        <StatCard icon={AlertTriangle} label="Pa stok" value={stats.zero} color="red" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatCard icon={Smartphone} label="Vlera Telefona" value={eur(stats.phoneValue)}
+          hint={`${stats.phoneUnits} copë`} color="indigo"
+          active={filter === "phone"}
+          onClick={() => setFilter(filter === "phone" ? "all" : "phone")}
+          tid="stock-card-phones" />
+        <StatCard icon={Headphones} label="Vlera Aksesorë" value={eur(stats.accValue)}
+          hint={`${stats.accUnits} copë`} color="emerald"
+          active={filter === "accessory"}
+          onClick={() => setFilter(filter === "accessory" ? "all" : "accessory")}
+          tid="stock-card-accessories" />
+        <StatCard icon={Boxes} label="Vlera totale" value={eur(stats.totalValue)} color="slate" />
+        <StatCard icon={Package} label="Njësi gjithsej" value={stats.phoneUnits + stats.accUnits} color="slate" />
+        <StatCard icon={AlertTriangle} label="Stok i ulët" value={stats.low} color="amber"
+          active={filter === "low"} onClick={() => setFilter(filter === "low" ? "all" : "low")} tid="stock-card-low" />
+        <StatCard icon={AlertTriangle} label="Pa stok" value={stats.zero} color="red"
+          active={filter === "zero"} onClick={() => setFilter(filter === "zero" ? "all" : "zero")} tid="stock-card-zero" />
       </div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-5">
