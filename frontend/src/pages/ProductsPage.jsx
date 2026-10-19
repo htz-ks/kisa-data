@@ -313,12 +313,11 @@ export default function ProductsPage() {
                 className="mt-1 bg-slate-900 border-slate-800" data-testid="product-wholesale-input" />
             </div>
             <div>
-              <Label>Stoku</Label>
-              <Input type="number" value={form.type === "phone" ? form.imeis.length || form.quantity || 0 : form.quantity}
+              <Label>Sasia</Label>
+              <Input type="number" value={form.quantity}
                 onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                disabled={form.type === "phone"}
-                className="mt-1 bg-slate-900 border-slate-800 disabled:opacity-70" data-testid="product-quantity-input" />
-              {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Stoku përditësohet automatikisht nga numri i IMEI-ve.</div>}
+                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-quantity-input" />
+              {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Shkruaje sasinë ose shto IMEI poshtë.</div>}
             </div>
             <div>
               <Label>Stoku Alarm</Label>
