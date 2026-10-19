@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
   FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, Undo2,
-  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet
+  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -23,6 +23,7 @@ const NAV = [
     children: [
       { to: "/products", icon: List, label: "Artikujt", roles: ["admin", "employee"], tid: "nav-products" },
       { to: "/products?new=1", icon: PlusSquare, label: "Krijo Artikull", roles: ["admin"], tid: "nav-product-new" },
+      { to: "/stock", icon: Warehouse, label: "Stoku", roles: ["admin", "employee"], tid: "nav-stock" },
       { to: "/categories", icon: Tags, label: "Çmimoret", roles: ["admin"], tid: "nav-categories" },
     ],
   },

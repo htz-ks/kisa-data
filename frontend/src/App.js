@@ -17,6 +17,7 @@ import PrintSalePage from "@/pages/PrintSalePage";
 import ReturnsPage from "@/pages/ReturnsPage";
 import SaleEntryPage from "@/pages/SaleEntryPage";
 import PrintLabelPage from "@/pages/PrintLabelPage";
+import StockPage from "@/pages/StockPage";
 
 function Protected({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -41,6 +42,7 @@ function App() {
               <Route path="/pos" element={<POSPage />} />
               <Route path="/sale/new" element={<SaleEntryPage />} />
               <Route path="/products" element={<ProductsPage />} />
+              <Route path="/stock" element={<StockPage />} />
               <Route path="/categories" element={<Protected adminOnly><CategoriesPage /></Protected>} />
               <Route path="/customers" element={<ContactsPage kind="customer" />} />
               <Route path="/suppliers" element={<Protected adminOnly><ContactsPage kind="supplier" /></Protected>} />
