@@ -4,8 +4,9 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import CustomerHistoryDrawer from "@/components/CustomerHistoryDrawer";
 
-const DebtRow = ({ c, type, onPaid }) => {
+const DebtRow = ({ c, type, onPaid, onOpen }) => {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const debt = c.balance || 0;
@@ -33,7 +34,11 @@ const DebtRow = ({ c, type, onPaid }) => {
 
   return (
     <tr className="border-b border-slate-800/50" data-testid={`debt-row-${c.id}`}>
-      <td className="px-4 py-3 font-medium">{c.name}</td>
+      <td className="px-4 py-3 font-medium">
+        {type === "customer" ? (
+          <button onClick={() => onOpen(c.id)} className="text-left text-sky-400 hover:underline" data-testid={`debt-open-history-${c.id}`}>{c.name}</button>
+        ) : c.name}
+      </td>
       <td className="px-4 py-3 text-slate-400">{c.phone || "—"}</td>
       <td className="px-4 py-3 text-right font-mono-pd font-semibold text-amber-400" data-testid={`debt-balance-${c.id}`}>{eur(debt)}</td>
       <td className="px-4 py-2 text-right">
@@ -54,7 +59,7 @@ const DebtRow = ({ c, type, onPaid }) => {
   );
 };
 
-const DebtTable = ({ list, type, onPaid }) => {
+const DebtTable = ({ list, type, onPaid, onOpen }) => {
   const debtors = list.filter((c) => (c.balance || 0) > 0.001).sort((a, b) => b.balance - a.balance);
   return (
     <div className="data-grid bg-[#0D131E] mb-8">
@@ -70,7 +75,7 @@ const DebtTable = ({ list, type, onPaid }) => {
           </tr>
         </thead>
         <tbody>
-          {debtors.map((c) => <DebtRow key={c.id} c={c} type={type} onPaid={onPaid} />)}
+          {debtors.map((c) => <DebtRow key={c.id} c={c} type={type} onPaid={onPaid} onOpen={onOpen} />)}
           {debtors.length === 0 && (
             <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">
               {type === "customer" ? "Asnjë klient me borxh." : "Asnjë borxh te furnitorët."}
@@ -87,6 +92,7 @@ export default function PaymentsPage() {
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [tab, setTab] = useState("customer");
+  const [historyId, setHistoryId] = useState(null);
 
   const load = async () => {
     const [p, c, s] = await Promise.all([api.get("/payments"), api.get("/customers"), api.get("/suppliers")]);
@@ -109,14 +115,15 @@ export default function PaymentsPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
-      <PageHeader title="Pagesa & Borxhe" subtitle="Shkruaj sa paguan dhe borxhi i mbetur llogaritet vetë" />
+      <PageHeader title="Pagesa & Borxhe" subtitle="Kliko te klienti për historinë e borxhit · shkruaj sa paguan dhe borxhi i mbetur llogaritet vetë" />
 
       <div className="grid lg:grid-cols-2 gap-5 mb-6">
         {tabBtn("customer", "Borxh klientësh", sum(customers), "text-amber-400")}
         {tabBtn("supplier", "Borxh furnitorësh", sum(suppliers), "text-red-400")}
       </div>
 
-      <DebtTable list={tab === "customer" ? customers : suppliers} type={tab} onPaid={load} />
+      <DebtTable list={tab === "customer" ? customers : suppliers} type={tab} onPaid={load} onOpen={setHistoryId} />
+      <CustomerHistoryDrawer customerId={historyId} onClose={() => setHistoryId(null)} />
 
       <h3 className="text-sm uppercase tracking-widest font-mono-pd text-slate-500 mb-3">Historiku i pagesave</h3>
       <div className="data-grid bg-[#0D131E]">

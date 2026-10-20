@@ -6,6 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, Phone, Mail, MapPin, Receipt, Wallet, Package } from "lucide-react";
+import { DebtLedger } from "@/components/DebtLedger";
 
 export default function CustomerHistoryDrawer({ customerId, onClose }) {
   const [data, setData] = useState(null);
@@ -46,6 +47,9 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
                 </Badge>
               </div>
             </div>
+
+            {/* Debt history */}
+            <DebtLedger customer={data.customer} ledger={data.ledger || []} />
 
             {/* Totals */}
             <div className="grid grid-cols-3 gap-3">

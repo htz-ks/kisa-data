@@ -1222,7 +1222,92 @@ async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
         "sales": [doc_to_json(s) for s in sales],
         "payments": [doc_to_json(p) for p in payments],
         "totals": totals,
+        "ledger": _debt_ledger(customer, sales, payments),
     }
+
+
+def _debt_ledger(customer: dict, sales: list, payments: list) -> list:
+    """Chronological debt history with running balance (oldest first)."""
+    events = [
+        {"date": s.get("created_at", ""), "kind": "sale", "doc": s.get("invoice_no", ""), "sale_id": str(s["_id"]),
+         "total": s.get("total", 0), "paid": s.get("paid_amount", 0), "debt": s.get("due_amount", 0) or 0}
+        for s in sales if (s.get("due_amount", 0) or 0) > 0
+    ] + [
+        {"date": p.get("created_at", ""), "kind": "payment", "doc": "Pagesë", "total": 0,
+         "paid": p.get("amount", 0), "debt": -(p.get("amount", 0) or 0)}
+        for p in payments
+    ]
+    events.sort(key=lambda e: e["date"])
+    opening = round((customer.get("balance", 0) or 0) - sum(e["debt"] for e in events), 2)
+    running = opening
+    rows = []
+    if abs(opening) > 0.004:
+        rows.append({"date": "", "kind": "opening", "doc": "Gjendja fillestare", "total": 0, "paid": 0, "debt": opening, "balance": opening})
+    for e in events:
+        running = round(running + e["debt"], 2)
+        rows.append({**e, "balance": running})
+    return rows
+
+
+@api.get("/customers/{cid}/statement.pdf")
+async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user)):
+    if not ObjectId.is_valid(cid) or not (customer := await db.customers.find_one({"_id": ObjectId(cid)})):
+        raise HTTPException(404, "Klienti nuk u gjet")
+    sales = await db.sales.find({"customer_id": cid}).to_list(1000)
+    payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
+    ledger = _debt_ledger(customer, sales, payments)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("title", parent=styles["Title"], fontSize=22, textColor=colors.HexColor("#10B981"))
+    small = ParagraphStyle("small", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#64748B"))
+    body = styles["Normal"]
+    story = [
+        Paragraph("KISA-DATA", title_style),
+        Paragraph("Kartela e borxhit të klientit", small),
+        Spacer(1, 8),
+        Paragraph(f"<b>Klienti:</b> {customer.get('name', '')}", body),
+        Paragraph(f"<b>Telefoni:</b> {customer.get('phone') or '-'}", body),
+        Paragraph(f"<b>Data:</b> {now_utc().strftime('%Y-%m-%d %H:%M')}", body),
+        Spacer(1, 10),
+    ]
+    data = [["Data", "Dokumenti", "Totali (€)", "Paguar (€)", "Borxh +/- (€)", "Gjendja (€)"]]
+    for r in ledger:
+        data.append([
+            (r["date"] or "")[:16].replace("T", " ") or "-",
+            r["doc"],
+            f"{r['total']:.2f}" if r["kind"] == "sale" else "",
+            f"{r['paid']:.2f}" if r["paid"] else "",
+            f"{r['debt']:+.2f}",
+            f"{r['balance']:.2f}",
+        ])
+    if len(data) == 1:
+        data.append(["-", "Pa lëvizje borxhi", "", "", "", "0.00"])
+    tbl = Table(data, colWidths=[32 * mm, 38 * mm, 25 * mm, 25 * mm, 30 * mm, 30 * mm], repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0B0F17")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]))
+    story += [tbl, Spacer(1, 12)]
+    tot = Table([["BORXHI AKTUAL:", f"€ {(customer.get('balance', 0) or 0):.2f}"]], colWidths=[45 * mm, 40 * mm], hAlign="RIGHT")
+    tot.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 12),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#B45309")),
+    ]))
+    story += [tot, Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]
+    doc.build(story)
+    buf.seek(0)
+    fname = "".join(ch for ch in customer.get("name", "klient") if ch.isalnum()) or "klient"
+    return StreamingResponse(buf, media_type="application/pdf",
+                             headers={"Content-Disposition": f'inline; filename="borxhi-{fname}.pdf"'})
 
 
 # ---------- Startup ----------
