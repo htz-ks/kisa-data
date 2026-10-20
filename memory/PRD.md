@@ -61,3 +61,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Historia e klientit: klik te fatura me borxh → borxhi i faturës, pagesat (FIFO, më e vjetra e para), kthimet dhe Mbetet.
 - Fshirja e pagesës (DELETE /api/payments/{id}) kthen borxhin. Historia e furnitorit (drawer, ledger, FIFO për blerje, WhatsApp, PDF /api/suppliers/{id}/statement.pdf).
 - PDF e faturës: seksion "Pagesat e borxhit të kësaj fature" (borxhi, çdo pagesë/kthim, mbetet).
+- PDF A4 e borxhit (klient/furnitor): të gjitha faturat me borxh në një dokument (artikujt, paguar, pagesat, mbetet).

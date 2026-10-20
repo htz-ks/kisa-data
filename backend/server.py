@@ -1341,8 +1341,9 @@ async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user))
         raise HTTPException(404, "Klienti nuk u gjet")
     sales = await db.sales.find({"customer_id": cid}).to_list(1000)
     payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
-    ledger = _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000))
-    return _statement_pdf(customer, ledger, "klientit", "Klienti")
+    returns = await db.returns.find({"customer_id": cid}).to_list(1000)
+    ledger = _debt_ledger(customer, sales, payments, returns)
+    return _statement_pdf(customer, ledger, "klientit", "Klienti", sales, _sale_debts(customer, sales, payments, returns))
 
 
 # ---------- Supplier history ----------
@@ -1374,10 +1375,48 @@ async def supplier_history(sid: str, _a: dict = Depends(require_admin)):
 @api.get("/suppliers/{sid}/statement.pdf")
 async def supplier_statement_pdf(sid: str, _a: dict = Depends(require_admin)):
     supplier, purchases, payments = await _supplier_data(sid)
-    return _statement_pdf(supplier, _debt_ledger(supplier, purchases, payments, []), "furnitorit", "Furnitori")
+    return _statement_pdf(supplier, _debt_ledger(supplier, purchases, payments, []), "furnitorit", "Furnitori",
+                          purchases, _sale_debts(supplier, purchases, payments, []))
 
 
-def _statement_pdf(customer: dict, ledger: list, who: str, label: str):
+def _debt_doc_section(d: dict, dd: dict, body, head_style) -> list:
+    """One invoice/purchase block: items, totals, payments allocated and remaining."""
+    title = d.get("invoice_no") or "Blerje"
+    date = (d.get("created_at") or "")[:16].replace("T", " ")
+    cell = getSampleStyleSheet()["BodyText"]
+    rows = [["Shifra", "Përshkrimi", "IMEI", "Sasia", "Çmimi (€)", "Totali (€)"]]
+    for it in d.get("items", []):
+        imei = it.get("imei") or ", ".join(it.get("imeis") or []) or "-"
+        price = it.get("sale_price", it.get("cost_price", 0)) or 0
+        rows.append([it.get("product_code") or "-", Paragraph(it.get("product_name", ""), cell), Paragraph(imei, cell),
+                     str(it.get("quantity", 0)), f"{price:.2f}", f"{it.get('line_total', 0):.2f}"])
+    left = dd["original_debt"]
+    moves = [(r["date"], "Kthim malli", r["amount"]) for r in dd["returns"]] + [(p["date"], "Pagesë", p["amount"]) for p in dd["payments"]]
+    rows.append(["", "Totali i faturës", "", "", "", f"{d.get('total', 0):.2f}"])
+    rows.append(["", "Paguar në shitje", "", "", f"-{dd['paid_at_sale']:.2f}", ""])
+    rows.append(["", "Borxhi i faturës", "", "", "", f"{left:.2f}"])
+    for mdate, mlabel, amount in sorted(moves, key=lambda m: m[0]):
+        left = round(left - amount, 2)
+        rows.append(["", f"{mlabel} · {(mdate or '')[:16].replace('T', ' ')}", "", "", f"-{amount:.2f}", f"{left:.2f}"])
+    rows.append(["", "MBETET", "", "", "", f"{dd['remaining']:.2f}"])
+    n_items = len(d.get("items", []))
+    tbl = Table(rows, colWidths=[16 * mm, 62 * mm, 36 * mm, 14 * mm, 26 * mm, 26 * mm], repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
+        ("BACKGROUND", (0, n_items + 1), (-1, -1), colors.HexColor("#F8FAFC")),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#B45309") if dd["remaining"] > 0 else colors.HexColor("#047857")),
+        ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+    ]))
+    return [Spacer(1, 10), Paragraph(f"<b>{title}</b> — {date}", head_style), Spacer(1, 3), tbl]
+
+
+def _statement_pdf(customer: dict, ledger: list, who: str, label: str, docs: list = (), debts: dict = None):
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)
@@ -1424,7 +1463,14 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str):
         ("FONTSIZE", (0, 0), (-1, -1), 12),
         ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#B45309")),
     ]))
-    story += [tot, Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]
+    story += [tot]
+    open_docs = [d for d in sorted(docs, key=lambda x: x.get("created_at", "")) if (debts or {}).get(str(d["_id"]))]
+    if open_docs:
+        head = ParagraphStyle("head", parent=body, fontSize=10, textColor=colors.HexColor("#0B0F17"))
+        story += [Spacer(1, 16), Paragraph("<b>FATURAT ME BORXH — DETAJET</b>", body)]
+        for d in open_docs:
+            story += _debt_doc_section(d, debts[str(d["_id"])], body, head)
+    story += [Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]
     doc.build(story)
     buf.seek(0)
     fname = "".join(ch for ch in customer.get("name", "klient") if ch.isalnum()) or "klient"
