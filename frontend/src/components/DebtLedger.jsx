@@ -2,8 +2,43 @@ import { Button } from "@/components/ui/button";
 import { eur, API } from "@/lib/api";
 import { FileText, MessageCircle, History } from "lucide-react";
 
+// Kosovo local numbers (044..., 049...) -> international 38344... required by WhatsApp
+export const waPhone = (raw) => {
+  let d = (raw || "").replace(/[^0-9]/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  else if (d.startsWith("0")) d = "383" + d.slice(1);
+  return d;
+};
+
+const openWa = (phone, msg) => {
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank", "noopener");
+};
+
+export const DebtActions = ({ customer, pdfPath, shareUrl, openDocs }) => {
+  const phone = waPhone(customer.phone);
+  const send = () => {
+    const lines = openDocs.map((d) => `• ${d.doc}: mbetet € ${d.remaining.toFixed(2)}`).join("\n");
+    const msg = `Përshëndetje ${customer.name}!\n\nBorxhi juaj aktual te Kisa-Data: € ${(customer.balance || 0).toFixed(2)}${lines ? `\n\n${lines}` : ""}\n\nFatura e plotë (PDF): ${shareUrl}\n\nFaleminderit!`;
+    openWa(phone, msg);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-3">
+        <Button onClick={send} className="h-16 text-lg font-bold bg-[#25D366] hover:bg-[#1ebe5a] text-white" data-testid="debt-whatsapp-btn">
+          <MessageCircle className="w-6 h-6 mr-2" /> WhatsApp
+        </Button>
+        <Button onClick={() => window.open(`${API}${pdfPath}`, "_blank")} className="h-16 text-lg font-bold bg-sky-600 hover:bg-sky-500 text-white" data-testid="debt-pdf-btn">
+          <FileText className="w-6 h-6 mr-2" /> PDF A4
+        </Button>
+      </div>
+      {!phone && <div className="text-xs text-amber-400">Klienti nuk ka numër telefoni — WhatsApp do të hapet pa marrës.</div>}
+    </div>
+  );
+};
+
 const waLink = (customer, ledger) => {
-  const phone = (customer.phone || "").replace(/[^0-9]/g, "");
+  const phone = waPhone(customer.phone);
   const lines = ledger.slice(-10).map((r) => {
     const d = (r.date || "").slice(0, 10);
     const what = r.kind === "payment" ? `Pagesë -€ ${r.paid.toFixed(2)}` : r.kind === "sale" ? `${r.doc} +€ ${r.debt.toFixed(2)}` : `${r.doc} € ${r.debt.toFixed(2)}`;

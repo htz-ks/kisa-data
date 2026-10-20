@@ -62,3 +62,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Fshirja e pagesës (DELETE /api/payments/{id}) kthen borxhin. Historia e furnitorit (drawer, ledger, FIFO për blerje, WhatsApp, PDF /api/suppliers/{id}/statement.pdf).
 - PDF e faturës: seksion "Pagesat e borxhit të kësaj fature" (borxhi, çdo pagesë/kthim, mbetet).
 - PDF A4 e borxhit (klient/furnitor): të gjitha faturat me borxh në një dokument (artikujt, paguar, pagesat, mbetet).
+- Drawer i klientit: vetëm info + borxhi aktual + butona të mëdhenj WhatsApp/PDF A4. WhatsApp: numri 0xx→383xx, mesazh me borxhin, faturat e hapura dhe link publik PDF (/api/public/statement/{cid}/{token}.pdf, token HMAC).

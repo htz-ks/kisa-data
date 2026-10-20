@@ -3,10 +3,8 @@ import api, { eur, API } from "@/lib/api";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Phone, Mail, MapPin, Receipt, Wallet, Package } from "lucide-react";
-import { DebtLedger } from "@/components/DebtLedger";
+import { Loader2, Phone, Mail, MapPin } from "lucide-react";
+import { DebtActions } from "@/components/DebtLedger";
 
 export const Line = ({ label, value, cls = "" }) => (
   <div className="flex justify-between"><span className="text-slate-400">{label}</span><span className={`font-mono-pd ${cls}`}>{value}</span></div>
@@ -34,7 +32,6 @@ export const SaleDebtDetail = ({ s, dd, paidLabel = "Paguar në shitje", debtLab
 export default function CustomerHistoryDrawer({ customerId, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [openSale, setOpenSale] = useState(null);
 
   useEffect(() => {
     if (!customerId) return;
@@ -66,110 +63,17 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
                     {data.customer.address && <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /> {data.customer.address}</div>}
                   </div>
                 </div>
-                <Badge variant="outline" className={data.customer.balance > 0 ? "border-amber-500/40 text-amber-300" : "border-emerald-500/40 text-emerald-300"}>
-                  Borxh: {eur(data.customer.balance || 0)}
-                </Badge>
+                <div className="text-right" data-testid="customer-current-debt">
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono-pd">Borxhi aktual</div>
+                  <div className={`text-3xl font-extrabold font-mono-pd ${data.customer.balance > 0 ? "text-amber-400" : "text-emerald-400"}`}>{eur(data.customer.balance || 0)}</div>
+                </div>
               </div>
             </div>
 
-            {/* Debt history */}
-            <DebtLedger customer={data.customer} ledger={data.ledger || []} />
-
-            {/* Totals */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="stat-card p-3">
-                <Receipt className="w-4 h-4 text-indigo-400 mb-1" />
-                <div className="text-xl font-bold">{data.totals.orders_count}</div>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono-pd">Fatura</div>
-              </div>
-              <div className="stat-card p-3">
-                <Package className="w-4 h-4 text-sky-400 mb-1" />
-                <div className="text-xl font-bold font-mono-pd">{eur(data.totals.total_spent)}</div>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono-pd">Blerë</div>
-              </div>
-              <div className="stat-card p-3">
-                <Wallet className="w-4 h-4 text-emerald-400 mb-1" />
-                <div className="text-xl font-bold font-mono-pd text-emerald-400">{eur(data.totals.total_paid)}</div>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono-pd">Paguar</div>
-              </div>
-            </div>
-
-            {/* Sales list */}
-            <div>
-              <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Receipt className="w-4 h-4" /> Faturat</h4>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {data.sales.length === 0 && <div className="text-xs text-slate-500 py-4 text-center">Pa fatura.</div>}
-                {data.sales.map((s) => {
-                  const dd = data.sale_debts?.[s.id];
-                  return (
-                  <div key={s.id} className={`p-3 rounded-lg bg-slate-900/40 border ${openSale === s.id ? "border-amber-500/50" : "border-slate-800"}`} data-testid={`history-sale-${s.id}`}>
-                    <div className={`flex justify-between items-center ${dd ? "cursor-pointer" : ""}`}
-                      onClick={() => dd && setOpenSale(openSale === s.id ? null : s.id)} data-testid={`history-sale-toggle-${s.id}`}>
-                      <div>
-                        <div className="font-mono-pd text-emerald-400 text-sm">{s.invoice_no}</div>
-                        <div className="text-xs text-slate-500">{(s.created_at || "").slice(0, 16).replace("T", " ")}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono-pd font-semibold">{eur(s.total)}</div>
-                        {dd && (dd.remaining > 0
-                          ? <div className="text-xs text-amber-400 font-mono-pd">Mbetet {eur(dd.remaining)}</div>
-                          : <div className="text-xs text-emerald-400 font-mono-pd">Borxhi i shlyer</div>)}
-                      </div>
-                      <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-400"
-                        onClick={(e) => { e.stopPropagation(); window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank"); }}>
-                        <Download className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">{s.items?.length || 0} artikuj · {s.payment_method?.toUpperCase()}{dd && openSale !== s.id ? " · kliko për pagesat" : ""}</div>
-                    {dd && openSale === s.id && <SaleDebtDetail s={s} dd={dd} />}
-                    {(s.items || []).some((it) => it.imei) && (
-                      <div className="mt-2 pt-2 border-t border-slate-800/60 space-y-1">
-                        {s.items.filter((it) => it.imei).map((it, i) => {
-                          const daysLeft = it.warranty_until
-                            ? Math.ceil((new Date(it.warranty_until) - new Date()) / (1000 * 60 * 60 * 24))
-                            : null;
-                          return (
-                            <div key={i} className="flex items-center justify-between text-xs" data-testid={`history-imei-${it.imei}`}>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="truncate text-slate-300">{it.product_name}</span>
-                                <span className="imei-badge shrink-0">{it.imei}</span>
-                              </div>
-                              {daysLeft !== null && (
-                                <span className={`shrink-0 font-mono-pd text-[10px] px-2 py-0.5 rounded-full border ${
-                                  daysLeft > 30 ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" :
-                                  daysLeft > 0 ? "text-amber-400 border-amber-500/40 bg-amber-500/10" :
-                                  "text-red-400 border-red-500/40 bg-red-500/10"
-                                }`}>
-                                  {daysLeft > 0 ? `${daysLeft} ditë garanci` : "Garancia skaduar"}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Payments list */}
-            <div>
-              <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Wallet className="w-4 h-4" /> Pagesat</h4>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {data.payments.length === 0 && <div className="text-xs text-slate-500 py-4 text-center">Pa pagesa.</div>}
-                {data.payments.map((p) => (
-                  <div key={p.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-900/40 border border-slate-800">
-                    <div>
-                      <div className="text-xs text-slate-500 font-mono-pd">{(p.created_at || "").slice(0, 10)}</div>
-                      <div className="text-xs text-slate-400">{p.notes || "—"}</div>
-                    </div>
-                    <div className="font-mono-pd text-emerald-400 font-semibold">{eur(p.amount)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <DebtActions customer={data.customer}
+              pdfPath={`/customers/${data.customer.id}/statement.pdf`}
+              shareUrl={`${API}/public/statement/${data.customer.id}/${data.share_token}.pdf`}
+              openDocs={data.sales.filter((x) => data.sale_debts?.[x.id]?.remaining > 0).map((x) => ({ doc: x.invoice_no, remaining: data.sale_debts[x.id].remaining }))} />
           </div>
         )}
       </SheetContent>

@@ -8,6 +8,8 @@ import os
 import io
 import logging
 import secrets
+import hmac
+import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Annotated
 
@@ -1268,6 +1270,7 @@ async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
         "totals": totals,
         "ledger": _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000)),
         "sale_debts": _sale_debts(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000)),
+        "share_token": _share_token(cid),
     }
 
 
@@ -1333,6 +1336,17 @@ def _debt_ledger(customer: dict, sales: list, payments: list, returns: list) -> 
         running = round(running + e["debt"], 2)
         rows.append({**e, "balance": running})
     return rows
+
+
+def _share_token(cid: str) -> str:
+    return hmac.new(JWT_SECRET.encode(), f"stmt:{cid}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+@api.get("/public/statement/{cid}/{token}.pdf")
+async def public_statement_pdf(cid: str, token: str):
+    if not hmac.compare_digest(token, _share_token(cid)):
+        raise HTTPException(404, "Linku nuk është i vlefshëm")
+    return await customer_statement_pdf(cid, {})
 
 
 @api.get("/customers/{cid}/statement.pdf")
