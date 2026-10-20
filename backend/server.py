@@ -7,6 +7,7 @@ load_dotenv(ROOT_DIR / ".env")
 import os
 import io
 import logging
+import secrets
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Annotated
 
@@ -440,6 +441,15 @@ async def _next_product_code() -> str:
     return f"P-{seq:05d}"
 
 
+async def _unique_barcode() -> str:
+    while True:
+        d = "20" + "".join(str(secrets.randbelow(10)) for _ in range(10))
+        check = (10 - sum(int(c) * (3 if i % 2 else 1) for i, c in enumerate(d)) % 10) % 10
+        code = d + str(check)
+        if not await db.products.find_one({"barcode": code}):
+            return code
+
+
 @api.post("/products")
 async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
     doc = body.model_dump()
@@ -447,6 +457,12 @@ async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
     if doc["type"] == "phone":
         doc["imeis"] = [{"imei": i, "status": "in_stock"} for i in imei_list]
         doc["quantity"] = len(doc["imeis"])
+    doc["barcode"] = (doc.get("barcode") or "").strip()
+    if doc["barcode"]:
+        if await db.products.find_one({"barcode": doc["barcode"]}):
+            raise HTTPException(400, "Ky barkod ekziston tashmë te një artikull tjetër")
+    else:
+        doc["barcode"] = await _unique_barcode()
     doc["code"] = await _next_product_code()
     doc["created_at"] = now_utc().isoformat()
     r = await db.products.insert_one(doc)

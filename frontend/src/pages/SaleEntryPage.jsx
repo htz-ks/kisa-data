@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus, Save, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { ProductFormDialog } from "@/components/ProductFormDialog";
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
@@ -32,6 +34,9 @@ export default function SaleEntryPage() {
   const [rows, setRows] = useState([emptyRow()]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newForRow, setNewForRow] = useState(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const load = async () => {
     const [c, p] = await Promise.all([api.get("/customers"), api.get("/products")]);
@@ -48,19 +53,35 @@ export default function SaleEntryPage() {
   const removeRow = (i) => setRows((r) => r.filter((_, idx) => idx !== i));
   const updateRow = (i, patch) => setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
 
-  const pickProduct = (i, product_id) => {
-    const prod = products.find((p) => p.id === product_id);
+  const applyProduct = (i, prod) => {
     if (!prod) { updateRow(i, { product_id: "", _code: "", _name: "", sale_price: 0, _type: "accessory" }); return; }
     const price = priceMode === "wholesale" && prod.wholesale_price > 0 ? prod.wholesale_price : prod.sale_price;
     updateRow(i, {
       product_id: prod.id,
-      _code: prod.barcode || "",
+      _code: prod.code || prod.barcode || "",
       _name: prod.name,
       sale_price: price,
       quantity: prod.type === "phone" ? 1 : 1,
       _type: prod.type,
       imei: "",
     });
+  };
+  const pickProduct = (i, product_id) => applyProduct(i, products.find((p) => p.id === product_id));
+
+  const findByCode = (i) => {
+    const q = (rows[i]._code || "").trim().toLowerCase();
+    if (!q) return;
+    const prod = products.find((p) => (p.code || "").toLowerCase() === q || (p.barcode || "").toLowerCase() === q);
+    if (prod) applyProduct(i, prod);
+    else if (rows[i].product_id) return;
+    else toast.error(`Nuk u gjet artikull me shifrën "${rows[i]._code}"`);
+  };
+
+  const onProductCreated = async (prod) => {
+    const p = await api.get("/products");
+    setProducts(p.data);
+    if (newForRow !== null) applyProduct(newForRow, prod);
+    setNewForRow(null);
   };
 
   // when price mode changes, repick prices on existing rows
@@ -233,17 +254,28 @@ export default function SaleEntryPage() {
                   return (
                     <tr key={i} className="border-b border-slate-200" data-testid={`sale-row-${i}`}>
                       <td className="px-1 py-1">
-                        <Input value={String(i + 1).padStart(3, "0")} readOnly
-                          className="h-8 bg-slate-50 border-slate-200 text-xs font-mono text-center" data-testid={`sale-line-no-${i}`} />
+                        <Input value={r._code} placeholder="Shifra / barkod"
+                          onChange={(e) => updateRow(i, { _code: e.target.value })}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); findByCode(i); } }}
+                          onBlur={() => findByCode(i)}
+                          className="h-8 bg-white border-slate-300 text-xs font-mono" data-testid={`sale-code-input-${i}`} />
                       </td>
                       <td className="px-1 py-1">
-                        <Select value={r.product_id || "none"} onValueChange={(v) => pickProduct(i, v === "none" ? "" : v)}>
+                        <Select value={r.product_id || "none"} onValueChange={(v) => {
+                          if (v === "__new__") { setNewForRow(i); return; }
+                          pickProduct(i, v === "none" ? "" : v);
+                        }}>
                           <SelectTrigger className="h-8 bg-white border-slate-300" data-testid={`sale-product-${i}`}>
                             <SelectValue placeholder="Zgjidh produktin" />
                           </SelectTrigger>
                           <SelectContent className="max-h-80">
+                            {isAdmin && (
+                              <SelectItem value="__new__" className="text-emerald-700 font-semibold" data-testid={`sale-create-product-${i}`}>
+                                + Krijo artikull të ri
+                              </SelectItem>
+                            )}
                             <SelectItem value="none">—</SelectItem>
-                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </td>
@@ -307,6 +339,7 @@ export default function SaleEntryPage() {
           </div>
         </div>
       </div>
+      <ProductFormDialog open={newForRow !== null} onOpenChange={(o) => !o && setNewForRow(null)} onSaved={onProductCreated} />
     </div>
   );
 }

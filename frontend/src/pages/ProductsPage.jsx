@@ -4,11 +4,6 @@ import api, { eur, formatApiErrorDetail } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -16,26 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Search, Smartphone, Box, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-
-const EMPTY = {
-  name: "", type: "accessory", brand: "", category_id: "", barcode: "",
-  cost_price: 0, sale_price: 0, wholesale_price: 0, quantity: 0, low_stock_threshold: 2, warranty_months: 12,
-  gb: "", ram: "", battery_percent: "", imeis: [], description: "",
-};
-
-const BRANDS = ["Apple", "Samsung", "Xiaomi", "Huawei", "Nokia"];
+import { ProductFormDialog, EMPTY_PRODUCT as EMPTY } from "@/components/ProductFormDialog";
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
-  const [imeiInput, setImeiInput] = useState("");
   const [sp, setSp] = useSearchParams();
   const navigate = useNavigate();
 
@@ -44,7 +30,6 @@ export default function ProductsPage() {
     if (sp.get("new") === "1" && isAdmin) {
       setForm(EMPTY);
       setEditId(null);
-      setImeiInput("");
       setOpen(true);
       // clean up the URL param so refresh doesn't re-open
       navigate("/products", { replace: true });
@@ -52,9 +37,8 @@ export default function ProductsPage() {
   }, [sp, isAdmin, navigate]);
 
   const load = async () => {
-    const [p, c] = await Promise.all([api.get("/products"), api.get("/categories")]);
+    const p = await api.get("/products");
     setProducts(p.data);
-    setCategories(c.data);
   };
 
   useEffect(() => { load(); }, []);
@@ -62,7 +46,6 @@ export default function ProductsPage() {
   const openCreate = () => {
     setForm(EMPTY);
     setEditId(null);
-    setImeiInput("");
     setOpen(true);
   };
 
@@ -71,7 +54,6 @@ export default function ProductsPage() {
       name: p.name || "",
       type: p.type || "accessory",
       brand: p.brand || "",
-      category_id: p.category_id || "",
       barcode: p.barcode || "",
       cost_price: p.cost_price || 0,
       sale_price: p.sale_price || 0,
@@ -89,50 +71,6 @@ export default function ProductsPage() {
     setOpen(true);
   };
 
-  const save = async () => {
-    try {
-      const payload = {
-        ...form,
-        cost_price: Number(form.cost_price) || 0,
-        sale_price: Number(form.sale_price) || 0,
-        wholesale_price: Number(form.wholesale_price) || 0,
-        quantity: Number(form.quantity) || 0,
-        low_stock_threshold: Number(form.low_stock_threshold) || 0,
-        warranty_months: Number(form.warranty_months) || 0,
-      };
-      if (editId) {
-        delete payload.imeis;
-        delete payload.type;
-        await api.put(`/products/${editId}`, payload);
-        toast.success("Produkti u përditësua");
-      } else {
-        await api.post("/products", payload);
-        toast.success("Produkti u shtua");
-      }
-      setOpen(false);
-      await load();
-    } catch (e) {
-      toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Gabim");
-    }
-  };
-
-  const del = async (id) => {
-    if (!window.confirm("Sigurt që dëshiron ta fshish këtë produkt?")) return;
-    try {
-      await api.delete(`/products/${id}`);
-      toast.success("Produkti u fshi");
-      await load();
-    } catch (e) {
-      toast.error(formatApiErrorDetail(e.response?.data?.detail));
-    }
-  };
-
-  const addImei = () => {
-    const v = imeiInput.trim();
-    if (!v) return;
-    setForm((f) => ({ ...f, imeis: [...f.imeis, v] }));
-    setImeiInput("");
-  };
 
   const hasFilter = !!q.trim() || typeFilter !== "all";
   const filtered = !hasFilter ? [] : products.filter((p) => {
@@ -245,135 +183,7 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl bg-[#141C2B] border-slate-800">
-          <DialogHeader>
-            <DialogTitle>{editId ? "Edito produktin" : "Shto produkt të ri"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label>Emri *</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-name-input" />
-            </div>
-            <div>
-              <Label>Lloji *</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })} disabled={!!editId}>
-                <SelectTrigger className="mt-1 bg-slate-900 border-slate-800" data-testid="product-type-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="phone">Telefon (me IMEI)</SelectItem>
-                  <SelectItem value="accessory">Aksesor (sasi)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Markë</Label>
-              <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
-                <SelectTrigger className="mt-1 bg-slate-900 border-slate-800" data-testid="product-brand-select">
-                  <SelectValue placeholder="Zgjidh markën" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Pa markë —</SelectItem>
-                  {BRANDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Barkod</Label>
-              <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800 font-mono-pd" data-testid="product-barcode-input" />
-            </div>
-            <div>
-              <Label>Çmim blerje (€)</Label>
-              <Input type="number" step="0.01" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-cost-input" />
-            </div>
-            <div>
-              <Label>Çmim shitje me pakicë (€)</Label>
-              <Input type="number" step="0.01" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-price-input" />
-            </div>
-            <div>
-              <Label>Çmim shitje me shumicë (€)</Label>
-              <Input type="number" step="0.01" value={form.wholesale_price} onChange={(e) => setForm({ ...form, wholesale_price: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-wholesale-input" />
-            </div>
-            <div>
-              <Label>Sasia</Label>
-              <Input type="number" value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-quantity-input" />
-              {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Shkruaje sasinë ose shto IMEI poshtë.</div>}
-            </div>
-            <div>
-              <Label>Stoku Alarm</Label>
-              <Input type="number" value={form.low_stock_threshold} onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" data-testid="product-threshold-input" />
-            </div>
-            {form.type === "phone" && (
-              <div>
-                <Label>Garanci (muaj)</Label>
-                <Input type="number" value={form.warranty_months} onChange={(e) => setForm({ ...form, warranty_months: e.target.value })}
-                  className="mt-1 bg-slate-900 border-slate-800" data-testid="product-warranty-input" />
-              </div>
-            )}
-            {form.type === "phone" && (
-              <>
-                <div>
-                  <Label>Memorie (GB)</Label>
-                  <Input value={form.gb} onChange={(e) => setForm({ ...form, gb: e.target.value })}
-                    placeholder="p.sh. 128" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-gb-input" />
-                </div>
-                <div>
-                  <Label>RAM</Label>
-                  <Input value={form.ram} onChange={(e) => setForm({ ...form, ram: e.target.value })}
-                    placeholder="p.sh. 8" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-ram-input" />
-                </div>
-                <div>
-                  <Label>Bateria (%)</Label>
-                  <Input value={form.battery_percent} onChange={(e) => setForm({ ...form, battery_percent: e.target.value })}
-                    placeholder="p.sh. 95" className="mt-1 bg-slate-900 border-slate-800" data-testid="product-battery-input" />
-                </div>
-              </>
-            )}
-
-            {form.type === "phone" && !editId && (
-              <div className="col-span-2">
-                <Label>Shto IMEI (opsionale, mund t'i shtosh me blerje)</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input value={imeiInput} onChange={(e) => setImeiInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImei())}
-                    placeholder="Shtyp IMEI dhe Enter"
-                    className="bg-slate-900 border-slate-800 font-mono-pd" data-testid="product-imei-input" />
-                  <Button type="button" onClick={addImei} variant="outline" data-testid="product-imei-add-btn">Shto</Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {form.imeis.map((im, i) => (
-                    <span key={i} className="imei-badge" data-testid={`imei-badge-${i}`}>
-                      {im}
-                      <button type="button" onClick={() => setForm({ ...form, imeis: form.imeis.filter((_, j) => j !== i) })} className="ml-1 text-red-400">×</button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="col-span-2">
-              <Label>Përshkrim</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="mt-1 bg-slate-900 border-slate-800" rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Anulo</Button>
-            <Button onClick={save} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="product-save-btn">
-              Ruaj
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductFormDialog open={open} onOpenChange={setOpen} editId={editId} initial={form} onSaved={load} />
     </div>
   );
 }
