@@ -9,6 +9,8 @@ import io
 import logging
 import secrets
 import hmac
+import fitz
+from PIL import Image, ImageOps
 import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Annotated
@@ -1346,18 +1348,23 @@ def _share_token(cid: str) -> str:
 async def public_statement_pdf(cid: str, token: str):
     if not hmac.compare_digest(token, _share_token(cid)):
         raise HTTPException(404, "Linku nuk është i vlefshëm")
-    return await customer_statement_pdf(cid, {})
+    return await customer_statement_pdf(cid, "pdf", {})
 
 
-@api.get("/customers/{cid}/statement.pdf")
-async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user)):
+async def _customer_statement(cid: str):
     if not ObjectId.is_valid(cid) or not (customer := await db.customers.find_one({"_id": ObjectId(cid)})):
         raise HTTPException(404, "Klienti nuk u gjet")
     sales = await db.sales.find({"customer_id": cid}).to_list(1000)
     payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
     returns = await db.returns.find({"customer_id": cid}).to_list(1000)
     ledger = _debt_ledger(customer, sales, payments, returns)
-    return _statement_pdf(customer, ledger, "klientit", "Klienti", sales, _sale_debts(customer, sales, payments, returns))
+    return customer, _statement_pdf(customer, ledger, "klientit", "Klienti", await _doc_descriptions(sales))
+
+
+@api.get("/customers/{cid}/statement.{fmt}")
+async def customer_statement_pdf(cid: str, fmt: Literal["pdf", "png"] = "pdf", _u: dict = Depends(get_current_user)):
+    customer, pdf = await _customer_statement(cid)
+    return _file_response(pdf if fmt == "pdf" else _pdf_to_png(pdf), customer.get("name", ""), fmt)
 
 
 # ---------- Supplier history ----------
@@ -1386,51 +1393,37 @@ async def supplier_history(sid: str, _a: dict = Depends(require_admin)):
     }
 
 
-@api.get("/suppliers/{sid}/statement.pdf")
-async def supplier_statement_pdf(sid: str, _a: dict = Depends(require_admin)):
+@api.get("/suppliers/{sid}/statement.{fmt}")
+async def supplier_statement_pdf(sid: str, fmt: Literal["pdf", "png"] = "pdf", _a: dict = Depends(require_admin)):
     supplier, purchases, payments = await _supplier_data(sid)
-    return _statement_pdf(supplier, _debt_ledger(supplier, purchases, payments, []), "furnitorit", "Furnitori",
-                          purchases, _sale_debts(supplier, purchases, payments, []))
+    pdf = _statement_pdf(supplier, _debt_ledger(supplier, purchases, payments, []), "furnitorit", "Furnitori",
+                         await _doc_descriptions(purchases))
+    return _file_response(pdf if fmt == "pdf" else _pdf_to_png(pdf), supplier.get("name", ""), fmt)
 
 
-def _debt_doc_section(d: dict, dd: dict, body, head_style) -> list:
-    """One invoice/purchase block: items, totals, payments allocated and remaining."""
-    title = d.get("invoice_no") or "Blerje"
-    date = (d.get("created_at") or "")[:16].replace("T", " ")
-    cell = getSampleStyleSheet()["BodyText"]
-    rows = [["Shifra", "Përshkrimi", "IMEI", "Sasia", "Çmimi (€)", "Totali (€)"]]
-    for it in d.get("items", []):
-        imei = it.get("imei") or ", ".join(it.get("imeis") or []) or "-"
-        price = it.get("sale_price", it.get("cost_price", 0)) or 0
-        rows.append([it.get("product_code") or "-", Paragraph(it.get("product_name", ""), cell), Paragraph(imei, cell),
-                     str(it.get("quantity", 0)), f"{price:.2f}", f"{it.get('line_total', 0):.2f}"])
-    left = dd["original_debt"]
-    moves = [(r["date"], "Kthim malli", r["amount"]) for r in dd["returns"]] + [(p["date"], "Pagesë", p["amount"]) for p in dd["payments"]]
-    rows.append(["", "Totali i faturës", "", "", "", f"{d.get('total', 0):.2f}"])
-    rows.append(["", "Paguar në shitje", "", "", f"-{dd['paid_at_sale']:.2f}", ""])
-    rows.append(["", "Borxhi i faturës", "", "", "", f"{left:.2f}"])
-    for mdate, mlabel, amount in sorted(moves, key=lambda m: m[0]):
-        left = round(left - amount, 2)
-        rows.append(["", f"{mlabel} · {(mdate or '')[:16].replace('T', ' ')}", "", "", f"-{amount:.2f}", f"{left:.2f}"])
-    rows.append(["", "MBETET", "", "", "", f"{dd['remaining']:.2f}"])
-    n_items = len(d.get("items", []))
-    tbl = Table(rows, colWidths=[16 * mm, 62 * mm, 36 * mm, 14 * mm, 26 * mm, 26 * mm], repeatRows=1)
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
-        ("BACKGROUND", (0, n_items + 1), (-1, -1), colors.HexColor("#F8FAFC")),
-        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#B45309") if dd["remaining"] > 0 else colors.HexColor("#047857")),
-        ("FONTSIZE", (0, 0), (-1, -1), 8.5),
-    ]))
-    return [Spacer(1, 10), Paragraph(f"<b>{title}</b> — {date}", head_style), Spacer(1, 3), tbl]
+async def _doc_descriptions(docs: list) -> dict:
+    """doc_id -> product details text (name, GB/RAM/battery, IMEI, qty)."""
+    pids = {it.get("product_id") for d in docs for it in d.get("items", []) if ObjectId.is_valid(it.get("product_id") or "")}
+    prods = {str(p["_id"]): p async for p in db.products.find({"_id": {"$in": [ObjectId(x) for x in pids]}})}
+    out = {}
+    for d in docs:
+        parts = []
+        for it in d.get("items", []):
+            p = prods.get(it.get("product_id"), {})
+            spec = " ".join(x for x in [f"{p['gb']}GB" if p.get("gb") else "", f"RAM {p['ram']}" if p.get("ram") else "",
+                                         f"Bat. {p['battery_percent']}%" if p.get("battery_percent") else ""] if x)
+            imei = it.get("imei") or ", ".join(it.get("imeis") or [])
+            txt = it.get("product_name", "") + (f" {spec}" if spec else "")
+            if imei:
+                txt += f" · IMEI {imei}"
+            if (it.get("quantity") or 1) > 1:
+                txt += f" × {it['quantity']}"
+            parts.append(txt)
+        out[str(d["_id"])] = "<br/>".join(parts)
+    return out
 
 
-def _statement_pdf(customer: dict, ledger: list, who: str, label: str, docs: list = (), debts: dict = None):
+def _statement_pdf(customer: dict, ledger: list, who: str, label: str, descs: dict = None) -> bytes:
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)
@@ -1447,27 +1440,32 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str, docs: lis
         Paragraph(f"<b>Data:</b> {now_utc().strftime('%Y-%m-%d %H:%M')}", body),
         Spacer(1, 10),
     ]
-    data = [["Data", "Dokumenti", "Totali (€)", "Paguar (€)", "Borxh +/- (€)", "Gjendja (€)"]]
+    cell = ParagraphStyle("cell", parent=body, fontSize=8, leading=10)
+    kind_txt = {"payment": "Pagesë borxhi", "return": "Kthim malli", "opening": "-"}
+    data = [["Data", "Dokumenti", "Përshkrimi", "Totali (€)", "Paguar (€)", "Borxh +/- (€)", "Gjendja (€)"]]
     for r in ledger:
+        desc = (descs or {}).get(r.get("sale_id"), "") if r["kind"] == "sale" else kind_txt.get(r["kind"], "")
         data.append([
             (r["date"] or "")[:16].replace("T", " ") or "-",
             r["doc"],
+            Paragraph(desc or "-", cell),
             f"{r['total']:.2f}" if r["kind"] == "sale" else "",
             f"{r['paid']:.2f}" if r["paid"] else "",
             f"{r['debt']:+.2f}",
             f"{r['balance']:.2f}",
         ])
     if len(data) == 1:
-        data.append(["-", "Pa lëvizje borxhi", "", "", "", "0.00"])
-    tbl = Table(data, colWidths=[32 * mm, 38 * mm, 25 * mm, 25 * mm, 30 * mm, 30 * mm], repeatRows=1)
+        data.append(["-", "Pa lëvizje borxhi", "", "", "", "", "0.00"])
+    tbl = Table(data, colWidths=[25 * mm, 26 * mm, 53 * mm, 18 * mm, 18 * mm, 21 * mm, 19 * mm], repeatRows=1)
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0B0F17")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+        ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
     ]))
     story += [tbl, Spacer(1, 12)]
     tot = Table([["BORXHI AKTUAL:", f"€ {(customer.get('balance', 0) or 0):.2f}"]], colWidths=[45 * mm, 40 * mm], hAlign="RIGHT")
@@ -1478,18 +1476,35 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str, docs: lis
         ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#B45309")),
     ]))
     story += [tot]
-    open_docs = [d for d in sorted(docs, key=lambda x: x.get("created_at", "")) if (debts or {}).get(str(d["_id"]))]
-    if open_docs:
-        head = ParagraphStyle("head", parent=body, fontSize=10, textColor=colors.HexColor("#0B0F17"))
-        story += [Spacer(1, 16), Paragraph("<b>FATURAT ME BORXH — DETAJET</b>", body)]
-        for d in open_docs:
-            story += _debt_doc_section(d, debts[str(d["_id"])], body, head)
     story += [Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]
     doc.build(story)
-    buf.seek(0)
-    fname = "".join(ch for ch in customer.get("name", "klient") if ch.isalnum()) or "klient"
-    return StreamingResponse(buf, media_type="application/pdf",
-                             headers={"Content-Disposition": f'inline; filename="borxhi-{fname}.pdf"'})
+    return buf.getvalue()
+
+
+def _pdf_to_png(pdf: bytes) -> bytes:
+    pages = []
+    with fitz.open(stream=pdf, filetype="pdf") as d:
+        for page in d:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            pages.append(Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB"))
+    out = Image.new("RGB", (max(p.width for p in pages), sum(p.height for p in pages)), "white")
+    y = 0
+    for p in pages:
+        out.paste(p, (0, y))
+        y += p.height
+    bbox = ImageOps.invert(out).getbbox()
+    if bbox:
+        out = out.crop((0, 0, out.width, min(out.height, bbox[3] + 60)))
+    b = io.BytesIO()
+    out.save(b, "PNG", optimize=True)
+    return b.getvalue()
+
+
+def _file_response(data: bytes, name: str, fmt: str):
+    media = "application/pdf" if fmt == "pdf" else "image/png"
+    fname = "".join(ch for ch in name if ch.isalnum()) or "kartela"
+    return StreamingResponse(io.BytesIO(data), media_type=media,
+                             headers={"Content-Disposition": f'inline; filename="borxhi-{fname}.{fmt}"'})
 
 
 # ---------- Startup ----------

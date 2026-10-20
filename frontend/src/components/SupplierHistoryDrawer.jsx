@@ -3,7 +3,7 @@ import api, { eur } from "@/lib/api";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Phone, Truck } from "lucide-react";
-import { DebtLedger } from "@/components/DebtLedger";
+import { DebtActions } from "@/components/DebtLedger";
 import { SaleDebtDetail } from "@/components/CustomerHistoryDrawer";
 
 const PurchaseCard = ({ p, dd, open, onToggle }) => (
@@ -52,7 +52,7 @@ export default function SupplierHistoryDrawer({ supplierId, onClose }) {
                 Borxh: {eur(s.balance || 0)}
               </Badge>
             </div>
-            <DebtLedger customer={s} ledger={data.ledger || []} pdfPath={`/suppliers/${s.id}/statement.pdf`} />
+            <DebtActions customer={s} pdfPath={`/suppliers/${s.id}/statement.pdf`} />
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="stat-card"><div className="text-2xl font-extrabold">{data.totals.purchases_count}</div><div className="text-[10px] uppercase text-slate-500">Blerje</div></div>
               <div className="stat-card"><div className="text-lg font-extrabold">{eur(data.totals.total_bought)}</div><div className="text-[10px] uppercase text-slate-500">Totali</div></div>

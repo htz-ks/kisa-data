@@ -63,3 +63,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - PDF e faturës: seksion "Pagesat e borxhit të kësaj fature" (borxhi, çdo pagesë/kthim, mbetet).
 - PDF A4 e borxhit (klient/furnitor): të gjitha faturat me borxh në një dokument (artikujt, paguar, pagesat, mbetet).
 - Drawer i klientit: vetëm info + borxhi aktual + butona të mëdhenj WhatsApp/PDF A4. WhatsApp: numri 0xx→383xx, mesazh me borxhin, faturat e hapura dhe link publik PDF (/api/public/statement/{cid}/{token}.pdf, token HMAC).
+- Kartela e borxhit (PDF/PNG): vetëm tabela përmbledhëse + kolona Përshkrimi (produkti, GB/RAM/bateria, IMEI); WhatsApp dërgon vetëm foto (Web Share në telefon; në kompjuter shkarkon foton + hap bisedën). Endpoint /statement.png (PyMuPDF).

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api, { eur, API } from "@/lib/api";
+import api, { eur } from "@/lib/api";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -70,10 +70,7 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
               </div>
             </div>
 
-            <DebtActions customer={data.customer}
-              pdfPath={`/customers/${data.customer.id}/statement.pdf`}
-              shareUrl={`${API}/public/statement/${data.customer.id}/${data.share_token}.pdf`}
-              openDocs={data.sales.filter((x) => data.sale_debts?.[x.id]?.remaining > 0).map((x) => ({ doc: x.invoice_no, remaining: data.sale_debts[x.id].remaining }))} />
+            <DebtActions customer={data.customer} pdfPath={`/customers/${data.customer.id}/statement.pdf`} />
           </div>
         )}
       </SheetContent>
