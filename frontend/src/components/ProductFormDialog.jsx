@@ -19,6 +19,71 @@ export const EMPTY_PRODUCT = {
   gb: "", ram: "", battery_percent: "", imeis: [], description: "",
 };
 
+const EMPTY_SRC = { seller_type: "supplier", supplier_id: "", citizen_name: "", citizen_phone: "", citizen_personal_no: "" };
+
+const PurchaseSourceFields = ({ src, setSrc, suppliers, citizens, total, paid, setPaid, inp }) => {
+  const pickCitizen = (name) => {
+    const c = citizens.find((x) => x.name === name);
+    setSrc({ ...src, citizen_name: name, ...(c ? { citizen_phone: c.phone || "", citizen_personal_no: c.personal_no || "" } : {}) });
+  };
+  return (
+    <div className="col-span-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3" data-testid="product-purchase-section">
+      <div className="text-sm font-semibold text-emerald-300">Blerja — nga kush e bleve? (shtohet direkt në stok)</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Shitësi</Label>
+          <Select value={src.seller_type} onValueChange={(v) => setSrc({ ...src, seller_type: v })}>
+            <SelectTrigger className={inp} data-testid="product-seller-type-select"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="supplier">Furnitor</SelectItem>
+              <SelectItem value="citizen">Qytetar</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {src.seller_type === "supplier" ? (
+          <div>
+            <Label>Furnitori</Label>
+            <Select value={src.supplier_id || "none"} onValueChange={(v) => setSrc({ ...src, supplier_id: v === "none" ? "" : v })}>
+              <SelectTrigger className={inp} data-testid="product-supplier-select"><SelectValue placeholder="Zgjidh furnitorin" /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="none">— Pa furnitor —</SelectItem>
+                {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div>
+            <Label>Emri i qytetarit *</Label>
+            <Input list="citizens-list" value={src.citizen_name} onChange={(e) => pickCitizen(e.target.value)} className={inp} data-testid="product-citizen-name-input" />
+            <datalist id="citizens-list">{citizens.map((c) => <option key={c.id} value={c.name}>{c.personal_no}</option>)}</datalist>
+          </div>
+        )}
+        {src.seller_type === "citizen" && (
+          <>
+            <div>
+              <Label>Telefoni</Label>
+              <Input value={src.citizen_phone} onChange={(e) => setSrc({ ...src, citizen_phone: e.target.value })} className={inp} data-testid="product-citizen-phone-input" />
+            </div>
+            <div>
+              <Label>Nr. personal</Label>
+              <Input value={src.citizen_personal_no} onChange={(e) => setSrc({ ...src, citizen_personal_no: e.target.value })} className={inp} data-testid="product-citizen-personal-input" />
+            </div>
+          </>
+        )}
+        <div>
+          <Label>Totali i blerjes</Label>
+          <div className="mt-1 h-9 flex items-center font-mono-pd text-emerald-300" data-testid="product-purchase-total">€ {total.toFixed(2)}</div>
+        </div>
+        <div>
+          <Label>Paguar (€)</Label>
+          <Input type="number" step="0.01" value={paid} onChange={(e) => setPaid(e.target.value)} className={inp} data-testid="product-purchase-paid-input" />
+          {Number(paid) < total && <div className="text-[11px] text-amber-400 mt-1">Borxh: € {(total - Number(paid || 0)).toFixed(2)}</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BRANDS = ["Apple", "Samsung", "Xiaomi", "Huawei", "Nokia"];
 
 // Random EAN-13 starting with "20" (in-store range) incl. check digit
@@ -33,11 +98,28 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
   const [form, setForm] = useState(initial);
   const [imeiInput, setImeiInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [src, setSrc] = useState(EMPTY_SRC);
+  const [paid, setPaidRaw] = useState("");
+  const [paidTouched, setPaidTouched] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
+  const [citizens, setCitizens] = useState([]);
 
   useEffect(() => {
-    if (open) { setForm({ ...EMPTY_PRODUCT, ...initial }); setImeiInput(""); }
+    if (!open) return;
+    setForm({ ...EMPTY_PRODUCT, ...initial }); setImeiInput("");
+    setSrc(EMPTY_SRC); setPaidRaw(""); setPaidTouched(false);
+    if (!editId) {
+      Promise.all([api.get("/suppliers"), api.get("/citizens")])
+        .then(([s, c]) => { setSuppliers(s.data); setCitizens(c.data); })
+        .catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const qty = form.type === "phone" && form.imeis.length ? form.imeis.length : Number(form.quantity) || 0;
+  const purchaseTotal = (Number(form.cost_price) || 0) * qty;
+  const paidValue = paidTouched ? paid : purchaseTotal.toFixed(2);
+  const setPaid = (v) => { setPaidTouched(true); setPaidRaw(v); };
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -61,6 +143,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
         low_stock_threshold: Number(form.low_stock_threshold) || 0,
         warranty_months: Number(form.warranty_months) || 0,
       };
+      if (!editId) payload.purchase = { ...src, paid_amount: Number(paidValue) || 0 };
       let data;
       if (editId) {
         delete payload.imeis;
@@ -184,6 +267,10 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
                 ))}
               </div>
             </div>
+          )}
+          {!editId && (
+            <PurchaseSourceFields src={src} setSrc={setSrc} suppliers={suppliers} citizens={citizens}
+              total={purchaseTotal} paid={paidValue} setPaid={setPaid} inp={inp} />
           )}
           <div className="col-span-2">
             <Label>Përshkrim</Label>

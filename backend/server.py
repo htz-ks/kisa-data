@@ -144,6 +144,15 @@ class IMEIItem(BaseModel):
     status: Literal["in_stock", "sold"] = "in_stock"
 
 
+class PurchaseSource(BaseModel):
+    seller_type: Literal["supplier", "citizen"] = "supplier"
+    supplier_id: Optional[str] = ""
+    citizen_name: Optional[str] = ""
+    citizen_phone: Optional[str] = ""
+    citizen_personal_no: Optional[str] = ""
+    paid_amount: float = 0.0
+
+
 class ProductIn(BaseModel):
     name: str
     type: Literal["phone", "accessory"] = "accessory"
@@ -161,6 +170,7 @@ class ProductIn(BaseModel):
     battery_percent: Optional[str] = ""
     imeis: List[str] = []  # for phones (adds new IMEIs)
     description: Optional[str] = ""
+    purchase: Optional[PurchaseSource] = None
 
 
 class ProductUpdate(BaseModel):
@@ -451,12 +461,16 @@ async def _unique_barcode() -> str:
 
 
 @api.post("/products")
-async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
+async def create_product(body: ProductIn, user: dict = Depends(require_admin)):
     doc = body.model_dump()
+    src = doc.pop("purchase", None)
+    if src and src["seller_type"] == "citizen" and not (src.get("citizen_name") or "").strip():
+        raise HTTPException(400, "Shkruaj emrin e qytetarit nga i cili e bleve")
     imei_list = doc.pop("imeis", []) or []
     if doc["type"] == "phone":
         doc["imeis"] = [{"imei": i, "status": "in_stock"} for i in imei_list]
-        doc["quantity"] = len(doc["imeis"])
+        if imei_list:
+            doc["quantity"] = len(doc["imeis"])
     doc["barcode"] = (doc.get("barcode") or "").strip()
     if doc["barcode"]:
         if await db.products.find_one({"barcode": doc["barcode"]}):
@@ -467,7 +481,43 @@ async def create_product(body: ProductIn, _a: dict = Depends(require_admin)):
     doc["created_at"] = now_utc().isoformat()
     r = await db.products.insert_one(doc)
     doc["_id"] = r.inserted_id
+    if src and doc["quantity"] > 0:
+        await _record_product_purchase(doc, imei_list, src, user)
     return doc_to_json(doc)
+
+
+async def _record_product_purchase(prod: dict, imei_list: list, src: dict, user: dict):
+    qty = prod["quantity"]
+    total = round(prod["cost_price"] * qty, 2)
+    paid = min(max(0.0, src.get("paid_amount") or 0.0), total)
+    due = round(total - paid, 2)
+    is_citizen = src["seller_type"] == "citizen"
+    supplier_id = None if is_citizen else (src.get("supplier_id") or None)
+    citizen = None
+    if is_citizen:
+        citizen = {k: (src.get(f"citizen_{k}") or "").strip() for k in ("name", "phone", "personal_no")}
+        key = {"personal_no": citizen["personal_no"]} if citizen["personal_no"] else {"name": citizen["name"], "phone": citizen["phone"]}
+        await db.citizens.update_one(key, {"$set": {**citizen, "updated_at": now_utc().isoformat()}}, upsert=True)
+    await db.purchases.insert_one({
+        "supplier_id": supplier_id,
+        "seller_type": src["seller_type"],
+        "citizen": citizen,
+        "items": [{
+            "product_id": str(prod["_id"]), "product_name": prod["name"], "quantity": qty,
+            "cost_price": prod["cost_price"], "line_total": total, "imeis": imei_list,
+        }],
+        "total": total, "paid_amount": paid, "due_amount": due,
+        "notes": "Regjistruar gjatë krijimit të artikullit",
+        "created_at": now_utc().isoformat(), "created_by": user["id"],
+    })
+    if supplier_id and due:
+        await db.suppliers.update_one({"_id": ObjectId(supplier_id)}, {"$inc": {"balance": due}})
+
+
+@api.get("/citizens")
+async def list_citizens(_a: dict = Depends(require_admin)):
+    data = await db.citizens.find({}).sort("name", 1).to_list(2000)
+    return [doc_to_json(c) for c in data]
 
 
 @api.put("/products/{pid}")

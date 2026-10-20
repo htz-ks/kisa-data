@@ -77,7 +77,7 @@ export default function PurchasesPage() {
           <thead className="text-left text-xs uppercase tracking-wider text-slate-500 font-mono-pd border-b border-slate-800">
             <tr>
               <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Furnitori</th>
+              <th className="px-4 py-3">Furnitori / Qytetari</th>
               <th className="px-4 py-3">Artikuj</th>
               <th className="px-4 py-3 text-right">Totali</th>
               <th className="px-4 py-3 text-right">Paguar</th>
@@ -90,7 +90,7 @@ export default function PurchasesPage() {
               return (
                 <tr key={p.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                   <td className="px-4 py-3 font-mono-pd text-xs text-slate-400">{(p.created_at || "").slice(0, 10)}</td>
-                  <td className="px-4 py-3">{sup?.name || "—"}</td>
+                  <td className="px-4 py-3">{p.citizen ? <span>{p.citizen.name} <span className="text-xs text-sky-400">(qytetar{p.citizen.personal_no ? ` · ${p.citizen.personal_no}` : ""})</span></span> : (sup?.name || "—")}</td>
                   <td className="px-4 py-3 text-slate-400">{p.items?.length || 0} artikuj</td>
                   <td className="px-4 py-3 text-right font-mono-pd">{eur(p.total)}</td>
                   <td className="px-4 py-3 text-right font-mono-pd text-emerald-400">{eur(p.paid_amount)}</td>
