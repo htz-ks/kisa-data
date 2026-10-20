@@ -116,7 +116,10 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const qty = form.type === "phone" && form.imeis.length ? Math.max(form.imeis.length, Number(form.quantity) || 0) : Number(form.quantity) || 0;
+  // include IMEIs typed but not yet added (they are saved too) so the purchase total / paid match the backend
+  const pendingCount = imeiInput.split(/[\s,;]+/).filter((v) => v && !form.imeis.includes(v)).length;
+  const imeiCount = form.imeis.length + pendingCount;
+  const qty = form.type === "phone" && imeiCount ? Math.max(imeiCount, Number(form.quantity) || 0) : Number(form.quantity) || 0;
   const purchaseTotal = (Number(form.cost_price) || 0) * qty;
   const paidValue = paidTouched ? paid : purchaseTotal.toFixed(2);
   const setPaid = (v) => { setPaidTouched(true); setPaidRaw(v); };
@@ -125,7 +128,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
 
   const splitImeis = (text) => text.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
   const addImei = () => {
-    const vals = splitImeis(imeiInput);
+    const vals = [...new Set(splitImeis(imeiInput))];
     if (!vals.length) return;
     const taken = new Set([...form.imeis, ...(form._existing_imeis || [])]);
     const fresh = vals.filter((v) => !taken.has(v));

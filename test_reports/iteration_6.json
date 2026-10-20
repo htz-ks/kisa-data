@@ -1,0 +1,36 @@
+{
+  "summary": "Tested IMEI registration in the product form (create, edit, inline from sale) and the IMEI auto-fill in /sale/new. Backend: 6 new tests plus the full regression suite, 34/34 passing. Frontend: found and fixed one blocking bug. A typed IMEI that was never added with Enter was not counted in the purchase quantity, so the purchase total showed EUR 0 and paid defaulted to 0. With no supplier selected, saving failed with 'Zgjidh furnitorin që të regjistrohet borxhi'; with a supplier selected, a false debt would be recorded. After the fix, every requested flow passes end to end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST/PUT /api/products (_ensure_imeis_free)", "issue": "Uniqueness check matches IMEIs of any status, sold ones included. A phone sold and later bought back (for example from a citizen) cannot be registered under a new product, because its IMEI is still 'sold' on the old product. Consider checking only status in_stock (or not sold)."},
+      {"endpoint": "POST /api/products", "issue": "The purchase validation uses qty = len(imeis) or quantity, but the stored quantity is max(quantity, len(imeis)). The two differ when quantity > number of IMEIs. Not blocking."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductFormDialog qty/purchaseTotal", "issue": "FIXED by testing agent: an IMEI typed but not added with Enter was not counted in qty, so the purchase total was EUR 0, paid was 0 and the backend rejected the save ('Zgjidh furnitorin...'). qty now includes pending IMEIs.", "selector": "[data-testid=product-purchase-total]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ProductFormDialog", "issues": ["addImei does not remove duplicates inside a single pasted string ('111 111' gives 2 badges). The backend removes them on save, so this is cosmetic only."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_product_imei.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Review and keep the qty fix in ProductFormDialog.jsx (pendingCount added to imeiCount)",
+    "Optional: limit IMEI uniqueness to non-sold IMEIs so bought-back phones can be registered again",
+    "Optional: remove duplicates inside one paste in addImei"
+  ],
+  "critical_code_review_comments": [
+    "ProductFormDialog: splitImeis logic is duplicated in the inline pendingCount; could reuse splitImeis",
+    "SaleEntryPage findByCode on blur still re-applies the product (known since iteration_4)",
+    "server.py is >1270 lines; split it into routers"
+  ],
+  "updated_files": ["/app/frontend/src/components/ProductFormDialog.jsx", "/app/backend/tests/test_product_imei.py"],
+  "success_rate": {"backend": "100% (34/34)", "frontend": "100% after fix (create with typed IMEI failed before the fix)"},
+  "seed_data_creation": "Created TEST_UI_Phone1/2/Inline (P-00147..P-00149) and sale INV-2026-00041. All were deleted, along with their purchases and 'ZZ Tel' (6ad75b47c786ea3e66b1bbc6). No TEST products remain. Invoice numbers up to 00041 and product codes up to P-00149 are used up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with REACT_APP_BACKEND_URL exported: test_product_barcode.py and test_product_purchase.py read only the env var, and without it collection fails with 4 errors. Verified in the UI: the IMEI section comes right after Barkod; a typed IMEI with no Enter is saved with qty 1; pasting 2 IMEIs and pressing Enter gives 2 badges; the duplicate-IMEI toast appears on create and edit; edit shows existing IMEIs and adds new ones (qty 2 -> 3); the sale auto-fills IMEIs (code+Enter, select, a second row of the same phone gets the next IMEI); an inline-created phone auto-selects and fills its IMEI; the sale saves. When clicking Radix select options in long lists, use scroll_into_view_if_needed, not force=True: the forced click picked the wrong option."
+}

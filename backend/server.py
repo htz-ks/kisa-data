@@ -471,7 +471,7 @@ async def create_product(body: ProductIn, user: dict = Depends(require_admin)):
         sid = src.get("supplier_id") or ""
         if sid and (not ObjectId.is_valid(sid) or not await db.suppliers.find_one({"_id": ObjectId(sid)})):
             raise HTTPException(400, "Furnitori nuk u gjet")
-        qty = len(doc.get("imeis") or []) or doc["quantity"]
+        qty = max(len(doc.get("imeis") or []), doc["quantity"]) if doc["type"] == "phone" else doc["quantity"]
         if not sid and (src.get("paid_amount") or 0) < doc["cost_price"] * qty:
             raise HTTPException(400, "Zgjidh furnitorin që të regjistrohet borxhi")
     imei_list = list(dict.fromkeys(i.strip() for i in (doc.pop("imeis", []) or []) if i.strip()))
@@ -531,12 +531,12 @@ async def list_citizens(_a: dict = Depends(require_admin)):
 async def _ensure_imeis_free(imeis: list, exclude_pid: Optional[str] = None):
     if not imeis:
         return
-    q = {"imeis.imei": {"$in": imeis}}
+    q = {"imeis": {"$elemMatch": {"imei": {"$in": imeis}, "status": "in_stock"}}}
     if exclude_pid:
         q["_id"] = {"$ne": ObjectId(exclude_pid)}
     other = await db.products.find_one(q)
     if other:
-        dup = next(x["imei"] for x in other["imeis"] if x["imei"] in imeis)
+        dup = next(x["imei"] for x in other["imeis"] if x["imei"] in imeis and x["status"] == "in_stock")
         raise HTTPException(400, f"IMEI {dup} ekziston te artikulli {other['name']}")
 
 
