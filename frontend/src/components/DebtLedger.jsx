@@ -13,7 +13,7 @@ const waLink = (customer, ledger) => {
   return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
 };
 
-export const DebtLedger = ({ customer, ledger }) => (
+export const DebtLedger = ({ customer, ledger, pdfPath }) => (
   <div data-testid="debt-ledger">
     <div className="flex items-center justify-between mb-2">
       <h4 className="text-sm font-bold flex items-center gap-2"><History className="w-4 h-4" /> Historia e borxhit</h4>
@@ -24,7 +24,7 @@ export const DebtLedger = ({ customer, ledger }) => (
           </a>
         </Button>
         <Button size="sm" variant="outline" data-testid="debt-pdf-btn"
-          onClick={() => window.open(`${API}/customers/${customer.id}/statement.pdf`, "_blank")}>
+          onClick={() => window.open(`${API}${pdfPath || `/customers/${customer.id}/statement.pdf`}`, "_blank")}>
           <FileText className="w-3.5 h-3.5 mr-1 text-sky-400" /> PDF A4
         </Button>
       </div>

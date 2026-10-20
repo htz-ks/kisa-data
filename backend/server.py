@@ -881,6 +881,17 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
 
 
 # ---------- Payments (debt settlement) ----------
+@api.delete("/payments/{pid}")
+async def delete_payment(pid: str, _a: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(pid) or not (p := await db.payments.find_one({"_id": ObjectId(pid)})):
+        raise HTTPException(404, "Pagesa nuk u gjet")
+    collection = db.customers if p["entity_type"] == "customer" else db.suppliers
+    if ObjectId.is_valid(p.get("entity_id", "")):
+        await collection.update_one({"_id": ObjectId(p["entity_id"])}, {"$inc": {"balance": p.get("amount", 0)}})
+    await db.payments.delete_one({"_id": p["_id"]})
+    return {"ok": True, "restored": p.get("amount", 0)}
+
+
 @api.get("/payments")
 async def list_payments(_u: dict = Depends(require_admin)):
     data = await db.payments.find({}).sort("created_at", -1).to_list(2000)
@@ -1268,7 +1279,7 @@ def _debt_ledger(customer: dict, sales: list, payments: list, returns: list) -> 
     for s in sales:
         debt = (s.get("due_amount", 0) or 0) + reduced.get(str(s["_id"]), 0)
         if debt > 0:
-            events.append({"date": s.get("created_at", ""), "kind": "sale", "doc": s.get("invoice_no", ""), "sale_id": str(s["_id"]),
+            events.append({"date": s.get("created_at", ""), "kind": "sale", "doc": s.get("invoice_no") or "Blerje", "sale_id": str(s["_id"]),
                            "total": s.get("total", 0), "paid": s.get("paid_amount", 0), "debt": debt})
     events += [
         {"date": r.get("created_at", ""), "kind": "return", "doc": f"Kthim {r.get('invoice_no', '')}", "total": 0,
@@ -1298,6 +1309,42 @@ async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user))
     sales = await db.sales.find({"customer_id": cid}).to_list(1000)
     payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
     ledger = _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000))
+    return _statement_pdf(customer, ledger, "klientit", "Klienti")
+
+
+# ---------- Supplier history ----------
+async def _supplier_data(sid: str):
+    if not ObjectId.is_valid(sid) or not (supplier := await db.suppliers.find_one({"_id": ObjectId(sid)})):
+        raise HTTPException(404, "Furnitori nuk u gjet")
+    purchases = await db.purchases.find({"supplier_id": sid}).sort("created_at", -1).to_list(1000)
+    payments = await db.payments.find({"entity_type": "supplier", "entity_id": sid}).sort("created_at", -1).to_list(1000)
+    return supplier, purchases, payments
+
+
+@api.get("/suppliers/{sid}/history")
+async def supplier_history(sid: str, _a: dict = Depends(require_admin)):
+    supplier, purchases, payments = await _supplier_data(sid)
+    return {
+        "supplier": doc_to_json(supplier),
+        "purchases": [doc_to_json(p) for p in purchases],
+        "payments": [doc_to_json(p) for p in payments],
+        "totals": {
+            "total_bought": sum(p.get("total", 0) for p in purchases),
+            "total_paid": sum(p.get("paid_amount", 0) for p in purchases) + sum(p.get("amount", 0) for p in payments),
+            "purchases_count": len(purchases),
+        },
+        "ledger": _debt_ledger(supplier, purchases, payments, []),
+        "purchase_debts": _sale_debts(supplier, purchases, payments, []),
+    }
+
+
+@api.get("/suppliers/{sid}/statement.pdf")
+async def supplier_statement_pdf(sid: str, _a: dict = Depends(require_admin)):
+    supplier, purchases, payments = await _supplier_data(sid)
+    return _statement_pdf(supplier, _debt_ledger(supplier, purchases, payments, []), "furnitorit", "Furnitori")
+
+
+def _statement_pdf(customer: dict, ledger: list, who: str, label: str):
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)
@@ -1307,9 +1354,9 @@ async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user))
     body = styles["Normal"]
     story = [
         Paragraph("KISA-DATA", title_style),
-        Paragraph("Kartela e borxhit të klientit", small),
+        Paragraph(f"Kartela e borxhit të {who}", small),
         Spacer(1, 8),
-        Paragraph(f"<b>Klienti:</b> {customer.get('name', '')}", body),
+        Paragraph(f"<b>{label}:</b> {customer.get('name', '')}", body),
         Paragraph(f"<b>Telefoni:</b> {customer.get('phone') or '-'}", body),
         Paragraph(f"<b>Data:</b> {now_utc().strftime('%Y-%m-%d %H:%M')}", body),
         Spacer(1, 10),

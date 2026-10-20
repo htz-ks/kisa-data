@@ -8,15 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, Phone, Mail, MapPin, Receipt, Wallet, Package } from "lucide-react";
 import { DebtLedger } from "@/components/DebtLedger";
 
-const Line = ({ label, value, cls = "" }) => (
+export const Line = ({ label, value, cls = "" }) => (
   <div className="flex justify-between"><span className="text-slate-400">{label}</span><span className={`font-mono-pd ${cls}`}>{value}</span></div>
 );
 
-const SaleDebtDetail = ({ s, dd }) => (
+export const SaleDebtDetail = ({ s, dd, paidLabel = "Paguar në shitje", debtLabel = "Borxhi i faturës" }) => (
   <div className="mt-2 pt-2 border-t border-slate-800/60 space-y-1 text-xs" data-testid={`sale-debt-detail-${s.id}`}>
     <Line label="Totali i faturës" value={eur(s.total)} />
-    <Line label="Paguar në shitje" value={eur(dd.paid_at_sale)} cls="text-emerald-400" />
-    <Line label="Borxhi i faturës" value={eur(dd.original_debt)} cls="text-amber-400" />
+    <Line label={paidLabel} value={eur(dd.paid_at_sale)} cls="text-emerald-400" />
+    <Line label={debtLabel} value={eur(dd.original_debt)} cls="text-amber-400" />
     {dd.returns.map((r, i) => (
       <Line key={`r${i}`} label={`Kthim mall · ${(r.date || "").slice(0, 10)}`} value={`− ${eur(r.amount)}`} cls="text-sky-400" />
     ))}
