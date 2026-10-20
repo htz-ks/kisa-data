@@ -134,6 +134,12 @@ export default function SaleEntryPage() {
       imei: r.imei || null,
     }));
     if (items.length === 0) { toast.error("Shto të paktën një artikull"); return; }
+    const phoneRows = rows.filter((r) => r.product_id && r._type === "phone");
+    const missing = phoneRows.find((r) => !(r.imei || "").trim());
+    if (missing) { toast.error(`Shkruaj IMEI për ${missing._name}`); return; }
+    const imeiList = phoneRows.map((r) => r.imei.trim());
+    const dup = imeiList.find((x, k) => imeiList.indexOf(x) !== k);
+    if (dup) { toast.error(`IMEI ${dup} është vendosur dy herë`); return; }
     const totalDiscount = rows.reduce((s, r) => s + (Number(r.discount) || 0), 0);
     setSaving(true);
     try {
@@ -163,7 +169,7 @@ export default function SaleEntryPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-6" data-testid="sale-entry-page">
-      <div className="max-w-6xl mx-auto bg-white border border-slate-300 rounded-lg shadow-sm">
+      <div className="max-w-[1400px] mx-auto bg-white border border-slate-300 rounded-lg shadow-sm">
         {/* Title bar */}
         <div className="border-b border-slate-300 px-5 py-3 flex items-center justify-between bg-slate-50 rounded-t-lg">
           <h1 className="text-xl font-bold text-slate-900">Shitja vendore <span className="text-emerald-600 font-normal">(I ri)</span></h1>
@@ -263,10 +269,10 @@ export default function SaleEntryPage() {
               <thead>
                 <tr className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 border-b border-slate-300">
                   <th className="px-2 py-2 text-left w-32">Shifra</th>
-                  <th className="px-2 py-2 text-left w-44">Barkodi</th>
+                  <th className="px-2 py-2 text-left w-52">Barkodi</th>
                   <th className="px-2 py-2 text-left">Përshkrimi</th>
                   <th className="px-2 py-2 text-right w-20">Stoku</th>
-                  <th className="px-2 py-2 text-left w-36">IMEI</th>
+                  <th className="px-2 py-2 text-left w-48">IMEI</th>
                   <th className="px-2 py-2 text-right w-20">Sasia</th>
                   <th className="px-2 py-2 text-right w-28">Çmimi</th>
                   <th className="px-2 py-2 text-right w-24">Zbritja</th>
@@ -277,7 +283,7 @@ export default function SaleEntryPage() {
               <tbody>
                 {rows.map((r, i) => {
                   const prod = products.find((p) => p.id === r.product_id);
-                  const availableImeis = (prod?.imeis || []).filter((x) => x.status === "in_stock");
+                  const availableImeis = (prod?.imeis || []).filter((x) => x.status === "in_stock" && !rows.some((o, k) => k !== i && o.imei === x.imei));
                   return (
                     <tr key={i} className="border-b border-slate-200" data-testid={`sale-row-${i}`}>
                       <td className="px-1 py-1">

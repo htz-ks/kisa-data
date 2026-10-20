@@ -646,44 +646,47 @@ async def get_sale(sid: str, _u: dict = Depends(get_current_user)):
 async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
     subtotal = 0.0
     enriched_items = []
+    cache: dict = {}
+    accessory_need: dict = {}
+    phone_new: dict = {}
+    seen_imeis: set = set()
+    now = now_utc()
+    # phase 1: validate everything in memory, nothing is written yet
     for it in body.items:
-        prod = await db.products.find_one({"_id": ObjectId(it.product_id)})
-        if not prod:
-            raise HTTPException(404, f"Produkti {it.product_id} nuk u gjet")
+        if it.product_id not in cache:
+            if not ObjectId.is_valid(it.product_id) or not (p := await db.products.find_one({"_id": ObjectId(it.product_id)})):
+                raise HTTPException(404, f"Produkti {it.product_id} nuk u gjet")
+            cache[it.product_id] = p
+        prod = cache[it.product_id]
 
         if prod.get("type") == "phone":
-            if not it.imei:
+            imei = (it.imei or "").strip()
+            if not imei:
                 raise HTTPException(400, f"IMEI mungon për {prod['name']}")
-            imeis = prod.get("imeis", []) or []
-            imei = it.imei.strip()
+            if imei in seen_imeis:
+                raise HTTPException(400, f"IMEI {imei} është vendosur dy herë në këtë faturë")
+            seen_imeis.add(imei)
+            imeis = prod.setdefault("imeis", []) or []
             found = next((x for x in imeis if x["imei"] == imei), None)
             if found and found["status"] != "in_stock":
                 raise HTTPException(400, f"IMEI {imei} është shitur më parë")
             if not found:
-                if prod.get("quantity", 0) < 1:
-                    raise HTTPException(400, f"IMEI {imei} nuk është në stok")
+                in_stock = len([x for x in imeis if x["status"] == "in_stock"])
+                phone_new[it.product_id] = phone_new.get(it.product_id, 0) + 1
+                if prod.get("quantity", 0) - in_stock < phone_new[it.product_id]:
+                    raise HTTPException(400, f"IMEI {imei} nuk është në stok për {prod['name']}")
                 found = {"imei": imei, "status": "in_stock"}
                 imeis.append(found)
             it.imei = imei
-            now = now_utc()
             months = int(prod.get("warranty_months", 12) or 0)
             warranty_until = (now + timedelta(days=months * 30)).isoformat() if months > 0 else None
-            found["status"] = "sold"
-            found["sold_at"] = now.isoformat()
-            found["warranty_until"] = warranty_until
-            await db.products.update_one(
-                {"_id": ObjectId(it.product_id)},
-                {"$set": {"imeis": imeis}, "$inc": {"quantity": -1}},
-            )
+            found.update({"status": "sold", "sold_at": now.isoformat(), "warranty_until": warranty_until})
             qty = 1
             warranty_info = {"warranty_months": months, "warranty_until": warranty_until}
         else:
-            if prod.get("quantity", 0) < it.quantity:
+            accessory_need[it.product_id] = accessory_need.get(it.product_id, 0) + it.quantity
+            if prod.get("quantity", 0) < accessory_need[it.product_id]:
                 raise HTTPException(400, f"Sasia e pamjaftueshme për {prod['name']}")
-            await db.products.update_one(
-                {"_id": ObjectId(it.product_id)},
-                {"$inc": {"quantity": -it.quantity}},
-            )
             qty = it.quantity
             warranty_info = {}
 
@@ -702,6 +705,14 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             "line_total": line_total,
             **warranty_info,
         })
+
+    # phase 2: apply stock changes
+    for pid, prod in cache.items():
+        if prod.get("type") == "phone":
+            sold_now = len([x for x in enriched_items if x["product_id"] == pid])
+            await db.products.update_one({"_id": ObjectId(pid)}, {"$set": {"imeis": prod["imeis"]}, "$inc": {"quantity": -sold_now}})
+        else:
+            await db.products.update_one({"_id": ObjectId(pid)}, {"$inc": {"quantity": -accessory_need[pid]}})
 
     discount = max(0.0, body.discount or 0.0)
     total = max(0.0, subtotal - discount)

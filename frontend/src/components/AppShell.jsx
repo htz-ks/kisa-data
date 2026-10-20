@@ -166,7 +166,7 @@ export default function AppShell() {
       <main className="pane-light flex-1 min-w-0 pb-20 md:pb-0">
         <Outlet />
       </main>
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

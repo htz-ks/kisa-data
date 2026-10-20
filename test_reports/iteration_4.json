@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the IMEI changes in Shitja vendore (/sale/new), the invoice (A4/80mm print and PDF), and returns. Backend pytest: 8 tests in /app/backend/tests/test_sale_imei.py, 5 passed. The 3 failures are edge-case bugs and none of them is in the requested scenarios. Playwright as admin: everything requested works. (1) Code P-00002 + Enter fills IMEI001 automatically; a 2nd row with P-00002 gets IMEI002; the datalist offers IMEI001..003; leaving and re-entering the code field does not change the IMEI. (2) A phone created with no IMEI and qty 2 shows an empty IMEI input with a red border. Saving it empty shows the toast 'IMEI mungon për ...'. Typing TESTUIIMEI1 and saving gives 'Fatura INV-2026-00009 u ruajt', qty drops to 1 and the IMEI is stored as sold. Selling the same IMEI again shows 'është shitur më parë'. Qty 0 with an unknown IMEI gives 'nuk është në stok' (API). (3) Returning through ReturnDialog gives 'Rikthimi u ruajt', qty goes back to 2, and the IMEI is in_stock again; it is auto-picked on the next sale. (4) The A4 print has the headers Shifra, Barkodi, Përshkrimi, IMEI / Garanci, Sasia, Çmimi, Totali with correct values in the page. 80mm shows 'P-00050 · barcode' and 'IMEI: ...' lines. GET /api/sales/{id}/invoice.pdf returns 200 with a valid %PDF; the column headers are confirmed in the code. (5) Regression: barcode 123456789099 + Enter fills P-00006, focus moves to the next row, the sale saves, and stock went 15 -> 14. HIGH: on screen, the A4 print page has a dark app background behind dark text, so the invoice values (Shifra/Barkodi/IMEI/Totals) cannot be read.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/sales", "issue": "Not atomic. Items are checked and stock is changed one at a time. If a later item fails (e.g. a phone row with no IMEI, a duplicate IMEI in the same request, or not enough stock), the earlier items' stock is already reduced and their IMEIs already marked sold, but no sale is saved. Reproduced: accessory qty 5 + phone with no IMEI -> 400, and the accessory qty became 4. The UI lets the same IMEI be typed or picked in 2 rows, so this can lose stock.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/sales", "issue": "An IMEI of only spaces ('   ') is accepted. The check `if not it.imei` runs before strip(), so the sale is saved with imei '' and an empty IMEI entry is added to the product. Strip first, then check."},
+      {"endpoint": "POST /api/sales", "issue": "Any unknown typed IMEI is accepted while quantity >= 1, even when all of the stock is registered IMEIs. Reproduced: a phone with 2 registered IMEIs (qty 2) sold with 'TESTRANDOM' -> 200, qty 1, but both registered IMEIs are still in_stock (2 in_stock IMEIs vs qty 1). Only allow an unregistered IMEI when quantity > the number of in_stock IMEIs."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PrintSalePage (A4 and thermal)", "issue": "The body keeps the app's global dark background rgb(11,15,23) and the invoice text is #111, so on screen the Shifra/Barkodi/Përshkrimi/IMEI cells, the invoice no., the client and the totals are invisible (also with emulate_media print). If the user prints with 'background graphics' on, the invoice is unreadable. If it is off, the white <th> header text prints on white paper. Fix: add `html,body{background:#fff !important;color:#111}` plus `-webkit-print-color-adjust:exact; print-color-adjust:exact` in the page <style>.", "selector": "/print/sale/:id", "priority": "HIGH"},
+      {"component": "SaleEntryPage toast", "issue": "The error toast (top-right) covers the 'Ruaj' button for several seconds after a failed save; Playwright click was blocked by the sonner toast. The user has to wait or click the toast away before retrying.", "selector": "[data-testid=sale-save-btn]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Sale entry IMEI", "issue": "The datalist and free typing do not exclude IMEIs already used in other rows. The user can pick the same IMEI in 2 rows, which leads to the backend partial-write bug above.", "affected_selectors": ["sale-imei-<i>"]}
+    ],
+    "design_issues": [
+      {"screen": "/sale/new items table", "issues": ["The IMEI column (w-36) is too narrow for a 15-digit IMEI; text is cut off ('ESTUIIMEI1')", "The Barkodi column cuts off 13-digit EAN barcodes ('200840802')", "Seeded P-00002 'iPhone T' has no barcode, so Barkodi stays empty for it (data issue, not code)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_sale_imei.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH: PrintSalePage - force a white background / dark text and print-color-adjust:exact so the invoice (Shifra/Barkodi/IMEI) can be seen and prints correctly",
+    "HIGH: create_sale - check ALL items first (including duplicate IMEIs in the same request), then apply the stock/IMEI updates; or roll back on failure",
+    "Strip the IMEI before the empty check in create_sale",
+    "Only accept an unregistered IMEI when product.quantity > the number of in_stock IMEIs",
+    "SaleEntryPage: block or warn on duplicate IMEIs across rows and filter used IMEIs out of the datalist; widen the IMEI/Barkodi columns; move the toast position or add an offset so it does not cover Ruaj"
+  ],
+  "critical_code_review_comments": [
+    "create_sale is not atomic (see backend critical)",
+    "findByCode runs on blur too, so re-focusing the code field re-applies the product and resets sale_price/qty (discount is kept). It can overwrite a manually edited price",
+    "server.py is 1238 lines; split it into routers"
+  ],
+  "updated_files": ["/app/backend/tests/test_sale_imei.py"],
+  "success_rate": {"backend": "62% (5/8; all requested scenarios pass, 3 edge-case bugs)", "frontend": "90% (all requested flows work; the print page can't be read on screen)"},
+  "seed_data_creation": "Created TEST_IMEI_* and TEST_UI_NoImeiPhone products plus their sales/returns; all deleted. The P-00006 accessory sale (INV-2026-00010) was deleted and its stock put back to 15. A leftover TEST_ sale INV-2026-00002 from a previous agent was also deleted. P-00002 IMEI001..003 are untouched (in_stock). Invoice numbers 00003-00010 were used up.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_sale_imei.py cleans up via MongoDB (reads backend/.env). Its 3 failing tests (whitespace IMEI, random IMEI when all stock is registered, partial write) should pass after the fixes. To check the print page, use /print/sale/<id>?format=a4|80 with add_init_script('window.print=()=>{}'). The error toast blocks sale-save-btn, so use force=True."
+}

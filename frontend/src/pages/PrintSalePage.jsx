@@ -32,6 +32,7 @@ export default function PrintSalePage() {
     80: "@page { size: 80mm auto; margin: 3mm; } body { font-family: Arial, sans-serif; color:#000; width: 72mm; font-size: 11px; }",
     58: "@page { size: 58mm auto; margin: 2mm; } body { font-family: Arial, sans-serif; color:#000; width: 54mm; font-size: 10px; }",
   }[format] || "";
+  const baseCSS = "html, body { background:#fff !important; color:#111 !important; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }";
 
   const narrow = format !== "a4";
 
@@ -39,7 +40,8 @@ export default function PrintSalePage() {
     return (
       <div style={{ padding: 0 }}>
         <style>{`
-          ${pageCSS}
+          ${baseCSS}
+        ${pageCSS}
           * { box-sizing: border-box; }
           .row { display:flex; justify-content:space-between; }
           .center { text-align:center; }
@@ -100,6 +102,7 @@ export default function PrintSalePage() {
   return (
     <div>
       <style>{`
+        ${baseCSS}
         ${pageCSS}
         * { box-sizing: border-box; }
         .wrap { max-width: 180mm; margin: 0 auto; padding: 0 4mm; }
