@@ -883,12 +883,11 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
 # ---------- Payments (debt settlement) ----------
 @api.delete("/payments/{pid}")
 async def delete_payment(pid: str, _a: dict = Depends(require_admin)):
-    if not ObjectId.is_valid(pid) or not (p := await db.payments.find_one({"_id": ObjectId(pid)})):
+    if not ObjectId.is_valid(pid) or not (p := await db.payments.find_one_and_delete({"_id": ObjectId(pid)})):
         raise HTTPException(404, "Pagesa nuk u gjet")
     collection = db.customers if p["entity_type"] == "customer" else db.suppliers
     if ObjectId.is_valid(p.get("entity_id", "")):
         await collection.update_one({"_id": ObjectId(p["entity_id"])}, {"$inc": {"balance": p.get("amount", 0)}})
-    await db.payments.delete_one({"_id": p["_id"]})
     return {"ok": True, "restored": p.get("amount", 0)}
 
 

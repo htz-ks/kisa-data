@@ -1,0 +1,24 @@
+{
+  "summary": "Tested DELETE /api/payments/{id} (debt restoration) and supplier debt history (history API, ledger, FIFO purchase_debts, statement PDF, WhatsApp) in both backend and UI, plus a regression check on the customer drawer, customer PDF and the existing debts suite. Backend: 21/21 pytest tests pass (11 new + 10 regression). UI: all requested flows pass. Deleting a customer payment (75) and a supplier payment (120) through window.confirm removed the row, put the amount back on the balance and showed a toast. The supplier drawer showed the ledger with Blerje + and Pagesë −, a running Gjendja ending at the balance, totals, purchase details (Paguar në blerje / Borxhi i blerjes / FIFO payment / Mbetet), a correct wa.me link, and the PDF A4 button returned 200 application/pdf with 'Kartela e borxhit të furnitorit'. All TEST_ data was cleaned up and no real customer or supplier was touched.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/payments/{id}", "issue": "Race condition: find_one then $inc then delete_one is not atomic, so two concurrent deletes could restore the amount twice. Use find_one_and_delete first, then $inc."},
+      {"endpoint": "DELETE /api/payments/{id}", "issue": "After an older payment is deleted, later payments still show their stored balance_before/balance_after. Those numbers are now stale in the history table. Not wrong for the ledger, which is recomputed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_payment_delete_supplier_history.py", "/app/backend/tests/seed_paydel_ui.py", "/app/test_reports/pytest/pytest_iter8.xml"],
+  "action_items": ["Optional: make delete_payment atomic using find_one_and_delete"],
+  "critical_code_review_comments": ["delete_payment is not atomic (double restore possible under concurrent requests)", "Deleted payments leave no audit trail; consider soft-delete or logging who deleted it", "server.py is ~1460 lines; consider splitting into routers (payments, suppliers, reports)"],
+  "updated_files": ["/app/backend/tests/test_payment_delete_supplier_history.py", "/app/backend/tests/seed_paydel_ui.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "TEST_ supplier/customer/product/purchase/sale/payments created by pytest fixtures and by seed_paydel_ui.py; all cleaned up (run 'python seed_paydel_ui.py clean' if leftovers appear)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use seed_paydel_ui.py seed|clean for UI test data. Supplier ledger uses 'Blerje' as the doc label (purchases have no invoice_no). Payments page is admin-only (route adminOnly). The PDF opens in a new tab authenticated by the cookie. Verify it by listening for the statement.pdf response, not by the popup URL."
+}
