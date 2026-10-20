@@ -45,7 +45,7 @@ class TestBarcode:
         created.append(d["id"])
         assert len(d["barcode"]) == 13 and d["barcode"].isdigit() and d["barcode"].startswith("20")
         assert ean_ok(d["barcode"])
-        assert d["code"].startswith("P-")
+        assert d["code"].isdigit()
         g = requests.get(f"{BASE_URL}/api/products/{d['id']}", headers=admin)
         assert g.json()["barcode"] == d["barcode"]
 

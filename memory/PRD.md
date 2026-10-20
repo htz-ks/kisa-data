@@ -55,3 +55,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Shitja: IMEI plotësohet automatikisht për telefona (IMEI i skanuar, ose i pari në stok që s’është në rresht tjetër).
 - Shitja: IMEI fushë teksti me sugjerime, validim i plotë para ruajtjes (pa humbje stoku), fatura (A4/80mm/PDF) me Shifra, Barkodi, Përshkrimi, IMEI.
 - Krijo/Edito Artikull: seksion IMEI për telefona (edhe në editim, add_imeis), IMEI i shkruar ruhet edhe pa Enter, unik mes artikujve (në stok). IMEI del automatikisht te Shitja.
+- Shifra: numër rendor i thjeshtë (1, 2, 3...), kodet e vjetra P-0000X u kthyen në numra.

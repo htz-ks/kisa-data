@@ -449,7 +449,7 @@ async def _next_product_code() -> str:
         return_document=True,
     )
     seq = counter["seq"] if counter else 1
-    return f"P-{seq:05d}"
+    return str(seq)
 
 
 async def _unique_barcode() -> str:
@@ -1232,6 +1232,12 @@ async def startup():
     # backfill: existing products without code
     async for p in db.products.find({"code": {"$exists": False}}):
         await db.products.update_one({"_id": p["_id"]}, {"$set": {"code": await _next_product_code()}})
+    # migrate old "P-00005" codes to plain numbers ("5"), also in stored sale items
+    async for p in db.products.find({"code": {"$regex": "^P-\\d+$"}}):
+        await db.products.update_one({"_id": p["_id"]}, {"$set": {"code": str(int(p["code"][2:]))}})
+    async for s in db.sales.find({"items.product_code": {"$regex": "^P-\\d+$"}}):
+        items = [{**it, "product_code": str(int(it["product_code"][2:])) if str(it.get("product_code", "")).startswith("P-") else it.get("product_code", "")} for it in s["items"]]
+        await db.sales.update_one({"_id": s["_id"]}, {"$set": {"items": items}})
     existing = await db.users.find_one({"email": admin_email})
     if not existing:
         await db.users.insert_one({
