@@ -188,6 +188,7 @@ class ProductUpdate(BaseModel):
     ram: Optional[str] = None
     battery_percent: Optional[str] = None
     description: Optional[str] = None
+    add_imeis: Optional[List[str]] = None
 
 
 class PurchaseItem(BaseModel):
@@ -473,11 +474,11 @@ async def create_product(body: ProductIn, user: dict = Depends(require_admin)):
         qty = len(doc.get("imeis") or []) or doc["quantity"]
         if not sid and (src.get("paid_amount") or 0) < doc["cost_price"] * qty:
             raise HTTPException(400, "Zgjidh furnitorin që të regjistrohet borxhi")
-    imei_list = doc.pop("imeis", []) or []
+    imei_list = list(dict.fromkeys(i.strip() for i in (doc.pop("imeis", []) or []) if i.strip()))
     if doc["type"] == "phone":
+        await _ensure_imeis_free(imei_list)
         doc["imeis"] = [{"imei": i, "status": "in_stock"} for i in imei_list]
-        if imei_list:
-            doc["quantity"] = len(doc["imeis"])
+        doc["quantity"] = max(doc["quantity"], len(imei_list))
     doc["barcode"] = (doc.get("barcode") or "").strip()
     if doc["barcode"]:
         if await db.products.find_one({"barcode": doc["barcode"]}):
@@ -527,9 +528,33 @@ async def list_citizens(_a: dict = Depends(require_admin)):
     return [doc_to_json(c) for c in data]
 
 
+async def _ensure_imeis_free(imeis: list, exclude_pid: Optional[str] = None):
+    if not imeis:
+        return
+    q = {"imeis.imei": {"$in": imeis}}
+    if exclude_pid:
+        q["_id"] = {"$ne": ObjectId(exclude_pid)}
+    other = await db.products.find_one(q)
+    if other:
+        dup = next(x["imei"] for x in other["imeis"] if x["imei"] in imeis)
+        raise HTTPException(400, f"IMEI {dup} ekziston te artikulli {other['name']}")
+
+
 @api.put("/products/{pid}")
 async def update_product(pid: str, body: ProductUpdate, _a: dict = Depends(require_admin)):
     update = {k: v for k, v in body.model_dump(exclude_none=True).items()}
+    add_imeis = list(dict.fromkeys(i.strip() for i in (update.pop("add_imeis", None) or []) if i.strip()))
+    if add_imeis:
+        prod = await db.products.find_one({"_id": ObjectId(pid)})
+        if not prod:
+            raise HTTPException(404, "Produkti nuk u gjet")
+        await _ensure_imeis_free(add_imeis, pid)
+        existing = prod.get("imeis") or []
+        known = {x["imei"] for x in existing}
+        existing += [{"imei": i, "status": "in_stock"} for i in add_imeis if i not in known]
+        in_stock = len([x for x in existing if x["status"] == "in_stock"])
+        update["imeis"] = existing
+        update["quantity"] = max(update.get("quantity", prod.get("quantity", 0)), in_stock)
     if not update:
         raise HTTPException(400, "Asgjë për të përditësuar")
     if "barcode" in update:

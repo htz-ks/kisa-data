@@ -116,26 +116,33 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const qty = form.type === "phone" && form.imeis.length ? form.imeis.length : Number(form.quantity) || 0;
+  const qty = form.type === "phone" && form.imeis.length ? Math.max(form.imeis.length, Number(form.quantity) || 0) : Number(form.quantity) || 0;
   const purchaseTotal = (Number(form.cost_price) || 0) * qty;
   const paidValue = paidTouched ? paid : purchaseTotal.toFixed(2);
   const setPaid = (v) => { setPaidTouched(true); setPaidRaw(v); };
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
+  const splitImeis = (text) => text.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
   const addImei = () => {
-    const v = imeiInput.trim();
-    if (!v) return;
-    setForm((f) => ({ ...f, imeis: [...f.imeis, v] }));
+    const vals = splitImeis(imeiInput);
+    if (!vals.length) return;
+    const taken = new Set([...form.imeis, ...(form._existing_imeis || [])]);
+    const fresh = vals.filter((v) => !taken.has(v));
+    if (fresh.length < vals.length) toast.error("Ky IMEI është shtuar tashmë");
+    setForm((f) => ({ ...f, imeis: [...f.imeis, ...fresh] }));
     setImeiInput("");
   };
 
   const save = async () => {
     if (!form.name.trim()) { toast.error("Shkruaj emrin e artikullit"); return; }
+    const pending = splitImeis(imeiInput).filter((v) => !form.imeis.includes(v));
+    const allImeis = form.type === "phone" ? [...form.imeis, ...pending] : [];
     setSaving(true);
     try {
       const payload = {
         ...form,
+        imeis: allImeis,
         cost_price: Number(form.cost_price) || 0,
         sale_price: Number(form.sale_price) || 0,
         wholesale_price: Number(form.wholesale_price) || 0,
@@ -148,9 +155,12 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
       if (editId) {
         delete payload.imeis;
         delete payload.type;
+        delete payload._existing_imeis;
+        if (allImeis.length) payload.add_imeis = allImeis;
         ({ data } = await api.put(`/products/${editId}`, payload));
         toast.success("Produkti u përditësua");
       } else {
+        delete payload._existing_imeis;
         ({ data } = await api.post("/products", payload));
         toast.success(`Produkti u shtua (${data.code})`);
       }
@@ -208,6 +218,29 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
             </div>
             {!editId && <div className="text-[11px] text-slate-500 mt-1">Nëse e lë bosh, gjenerohet automatikisht.</div>}
           </div>
+          {form.type === "phone" && (
+            <div className="col-span-2 rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3" data-testid="product-imei-section">
+              <Label>IMEI {editId ? "(shto IMEI të reja)" : ""}</Label>
+              <div className="flex gap-2 mt-1">
+                <Input value={imeiInput} onChange={(e) => setImeiInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImei())}
+                  placeholder="Shkruaj / skano IMEI dhe shtyp Enter" className="bg-slate-900 border-slate-800 font-mono-pd" data-testid="product-imei-input" />
+                <Button type="button" onClick={addImei} variant="outline" data-testid="product-imei-add-btn">Shto</Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {(form._existing_imeis || []).map((im) => (
+                  <span key={im} className="imei-badge opacity-70" title="Në stok">{im}</span>
+                ))}
+                {form.imeis.map((im, i) => (
+                  <span key={i} className="imei-badge" data-testid={`imei-badge-${i}`}>
+                    {im}
+                    <button type="button" onClick={() => set({ imeis: form.imeis.filter((_, j) => j !== i) })} className="ml-1 text-red-400">×</button>
+                  </span>
+                ))}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-1">IMEI shfaqet automatikisht te Shitja vendore. Sasia llogaritet nga numri i IMEI-ve.</div>
+            </div>
+          )}
           <div>
             <Label>Çmim blerje (€)</Label>
             <Input type="number" step="0.01" value={form.cost_price} onChange={(e) => set({ cost_price: e.target.value })} className={inp} data-testid="product-cost-input" />
@@ -223,7 +256,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
           <div>
             <Label>Sasia</Label>
             <Input type="number" value={form.quantity} onChange={(e) => set({ quantity: e.target.value })} className={inp} data-testid="product-quantity-input" />
-            {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Shkruaje sasinë ose shto IMEI poshtë.</div>}
+            {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Për telefona shto IMEI më lart.</div>}
           </div>
           <div>
             <Label>Stoku Alarm</Label>
@@ -248,25 +281,6 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
                 <Input value={form.battery_percent} onChange={(e) => set({ battery_percent: e.target.value })} placeholder="p.sh. 95" className={inp} data-testid="product-battery-input" />
               </div>
             </>
-          )}
-          {form.type === "phone" && !editId && (
-            <div className="col-span-2">
-              <Label>Shto IMEI (opsionale, mund t'i shtosh me blerje)</Label>
-              <div className="flex gap-2 mt-1">
-                <Input value={imeiInput} onChange={(e) => setImeiInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImei())}
-                  placeholder="Shtyp IMEI dhe Enter" className="bg-slate-900 border-slate-800 font-mono-pd" data-testid="product-imei-input" />
-                <Button type="button" onClick={addImei} variant="outline" data-testid="product-imei-add-btn">Shto</Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {form.imeis.map((im, i) => (
-                  <span key={i} className="imei-badge" data-testid={`imei-badge-${i}`}>
-                    {im}
-                    <button type="button" onClick={() => set({ imeis: form.imeis.filter((_, j) => j !== i) })} className="ml-1 text-red-400">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
           )}
           {!editId && (
             <PurchaseSourceFields src={src} setSrc={setSrc} suppliers={suppliers} citizens={citizens}

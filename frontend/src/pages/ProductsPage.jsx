@@ -65,6 +65,7 @@ export default function ProductsPage() {
       ram: p.ram || "",
       battery_percent: p.battery_percent || "",
       imeis: [],
+      _existing_imeis: (p.imeis || []).filter((x) => x.status === "in_stock").map((x) => x.imei),
       description: p.description || "",
     });
     setEditId(p.id);
