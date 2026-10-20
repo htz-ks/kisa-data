@@ -52,3 +52,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - P2: Ndarja e tabelës së shitjes në komponent më vete.
 - Kolona "Barkodi" në Shitje: skanim me skaner/tastierë + Enter ose me kamerë; gjen artikullin sipas barkodit (ose IMEI-t në stok); shton dhe fokuson rresht të ri automatikisht.
 - Krijo Artikull → seksioni "Blerja": Furnitor ose Qytetar (emri, telefoni, nr. personal – ruhen te /api/citizens), totali, paguar (parazgjedhje i plotë, i ndryshueshëm). Ruhet automatikisht si blerje te Blerjet; borxhi shtohet te furnitori; stoku hyn direkt.
+- Shitja: IMEI plotësohet automatikisht për telefona (IMEI i skanuar, ose i pari në stok që s’është në rresht tjetër).

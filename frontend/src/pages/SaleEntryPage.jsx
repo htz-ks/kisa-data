@@ -55,9 +55,14 @@ export default function SaleEntryPage() {
   const removeRow = (i) => setRows((r) => r.filter((_, idx) => idx !== i));
   const updateRow = (i, patch) => setRows((r) => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
 
-  const applyProduct = (i, prod) => {
-    if (!prod) { updateRow(i, { product_id: "", _code: "", _barcode: "", _name: "", sale_price: 0, _type: "accessory" }); return; }
+  const applyProduct = (i, prod, wantedImei = "") => {
+    if (!prod) { updateRow(i, { product_id: "", _code: "", _barcode: "", _name: "", sale_price: 0, _type: "accessory", imei: "" }); return; }
     const price = priceMode === "wholesale" && prod.wholesale_price > 0 ? prod.wholesale_price : prod.sale_price;
+    // auto-pick IMEI: scanned one, else first in-stock IMEI not used in another row
+    const used = new Set(rows.filter((_, idx) => idx !== i).map((r) => r.imei).filter(Boolean));
+    const imei = prod.type === "phone"
+      ? wantedImei || ((prod.imeis || []).find((x) => x.status === "in_stock" && !used.has(x.imei))?.imei || "")
+      : "";
     updateRow(i, {
       product_id: prod.id,
       _code: prod.code || prod.barcode || "",
@@ -66,7 +71,7 @@ export default function SaleEntryPage() {
       sale_price: price,
       quantity: prod.type === "phone" ? 1 : 1,
       _type: prod.type,
-      imei: "",
+      imei,
     });
   };
   const pickProduct = (i, product_id) => applyProduct(i, products.find((p) => p.id === product_id));
@@ -91,8 +96,7 @@ export default function SaleEntryPage() {
       if (prod) imei = q;
     }
     if (!prod) { toast.error(`Nuk u gjet artikull me barkodin "${q}"`); return; }
-    applyProduct(i, prod);
-    if (imei) updateRow(i, { imei });
+    applyProduct(i, prod, imei);
     if (i === rows.length - 1) {
       setRows((r) => [...r, emptyRow()]);
       setTimeout(() => document.querySelector(`[data-testid="sale-barcode-input-${i + 1}"]`)?.focus(), 50);
