@@ -1223,7 +1223,40 @@ async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
         "payments": [doc_to_json(p) for p in payments],
         "totals": totals,
         "ledger": _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000)),
+        "sale_debts": _sale_debts(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000)),
     }
+
+
+def _sale_debts(customer: dict, sales: list, payments: list, returns: list) -> dict:
+    """Per-invoice debt breakdown; payments are allocated to the oldest open debt first."""
+    ret_by_sale: dict = {}
+    for r in returns:
+        if (r.get("debt_reduction", 0) or 0) > 0:
+            ret_by_sale.setdefault(r.get("sale_id"), []).append({"date": r.get("created_at", ""), "amount": r["debt_reduction"]})
+    out = {}
+    for s in sorted(sales, key=lambda x: x.get("created_at", "")):
+        sid = str(s["_id"])
+        rets = ret_by_sale.get(sid, [])
+        original = (s.get("due_amount", 0) or 0) + sum(r["amount"] for r in rets)
+        if original > 0:
+            out[sid] = {"original_debt": round(original, 2), "paid_at_sale": s.get("paid_amount", 0),
+                        "returns": rets, "payments": [], "remaining": round(s.get("due_amount", 0) or 0, 2)}
+    total_open = sum(d["remaining"] for d in out.values())
+    opening = max(0.0, round((customer.get("balance", 0) or 0) + sum(p.get("amount", 0) for p in payments) - total_open, 2))
+    for p in sorted(payments, key=lambda x: x.get("created_at", "")):
+        left = p.get("amount", 0) or 0
+        take = min(opening, left)
+        opening -= take
+        left -= take
+        for d in out.values():
+            if left <= 0.004:
+                break
+            if d["remaining"] > 0.004:
+                use = min(d["remaining"], left)
+                d["remaining"] = round(d["remaining"] - use, 2)
+                d["payments"].append({"date": p.get("created_at", ""), "amount": round(use, 2)})
+                left -= use
+    return out
 
 
 def _debt_ledger(customer: dict, sales: list, payments: list, returns: list) -> list:

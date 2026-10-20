@@ -8,9 +8,33 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, Phone, Mail, MapPin, Receipt, Wallet, Package } from "lucide-react";
 import { DebtLedger } from "@/components/DebtLedger";
 
+const Line = ({ label, value, cls = "" }) => (
+  <div className="flex justify-between"><span className="text-slate-400">{label}</span><span className={`font-mono-pd ${cls}`}>{value}</span></div>
+);
+
+const SaleDebtDetail = ({ s, dd }) => (
+  <div className="mt-2 pt-2 border-t border-slate-800/60 space-y-1 text-xs" data-testid={`sale-debt-detail-${s.id}`}>
+    <Line label="Totali i faturës" value={eur(s.total)} />
+    <Line label="Paguar në shitje" value={eur(dd.paid_at_sale)} cls="text-emerald-400" />
+    <Line label="Borxhi i faturës" value={eur(dd.original_debt)} cls="text-amber-400" />
+    {dd.returns.map((r, i) => (
+      <Line key={`r${i}`} label={`Kthim mall · ${(r.date || "").slice(0, 10)}`} value={`− ${eur(r.amount)}`} cls="text-sky-400" />
+    ))}
+    {dd.payments.length === 0 && <div className="text-slate-500">Asnjë pagesë për këtë borxh ende.</div>}
+    {dd.payments.map((p, i) => (
+      <Line key={`p${i}`} label={`Pagesë · ${(p.date || "").slice(0, 16).replace("T", " ")}`} value={`− ${eur(p.amount)}`} cls="text-emerald-400" />
+    ))}
+    <div className="flex justify-between pt-1 border-t border-slate-800/60 font-bold">
+      <span>Mbetet</span>
+      <span className={`font-mono-pd ${dd.remaining > 0 ? "text-amber-400" : "text-emerald-400"}`} data-testid={`sale-debt-remaining-${s.id}`}>{eur(dd.remaining)}</span>
+    </div>
+  </div>
+);
+
 export default function CustomerHistoryDrawer({ customerId, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [openSale, setOpenSale] = useState(null);
 
   useEffect(() => {
     if (!customerId) return;
@@ -75,23 +99,29 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
               <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Receipt className="w-4 h-4" /> Faturat</h4>
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {data.sales.length === 0 && <div className="text-xs text-slate-500 py-4 text-center">Pa fatura.</div>}
-                {data.sales.map((s) => (
-                  <div key={s.id} className="p-3 rounded-lg bg-slate-900/40 border border-slate-800" data-testid={`history-sale-${s.id}`}>
-                    <div className="flex justify-between items-center">
+                {data.sales.map((s) => {
+                  const dd = data.sale_debts?.[s.id];
+                  return (
+                  <div key={s.id} className={`p-3 rounded-lg bg-slate-900/40 border ${openSale === s.id ? "border-amber-500/50" : "border-slate-800"}`} data-testid={`history-sale-${s.id}`}>
+                    <div className={`flex justify-between items-center ${dd ? "cursor-pointer" : ""}`}
+                      onClick={() => dd && setOpenSale(openSale === s.id ? null : s.id)} data-testid={`history-sale-toggle-${s.id}`}>
                       <div>
                         <div className="font-mono-pd text-emerald-400 text-sm">{s.invoice_no}</div>
                         <div className="text-xs text-slate-500">{(s.created_at || "").slice(0, 16).replace("T", " ")}</div>
                       </div>
                       <div className="text-right">
                         <div className="font-mono-pd font-semibold">{eur(s.total)}</div>
-                        {s.due_amount > 0 && <div className="text-xs text-amber-400 font-mono-pd">Borxh {eur(s.due_amount)}</div>}
+                        {dd && (dd.remaining > 0
+                          ? <div className="text-xs text-amber-400 font-mono-pd">Mbetet {eur(dd.remaining)}</div>
+                          : <div className="text-xs text-emerald-400 font-mono-pd">Borxhi i shlyer</div>)}
                       </div>
                       <Button variant="ghost" size="icon" className="w-8 h-8 text-slate-400"
-                        onClick={() => window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank")}>
+                        onClick={(e) => { e.stopPropagation(); window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank"); }}>
                         <Download className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">{s.items?.length || 0} artikuj · {s.payment_method?.toUpperCase()}</div>
+                    <div className="text-xs text-slate-400 mt-1">{s.items?.length || 0} artikuj · {s.payment_method?.toUpperCase()}{dd && openSale !== s.id ? " · kliko për pagesat" : ""}</div>
+                    {dd && openSale === s.id && <SaleDebtDetail s={s} dd={dd} />}
                     {(s.items || []).some((it) => it.imei) && (
                       <div className="mt-2 pt-2 border-t border-slate-800/60 space-y-1">
                         {s.items.filter((it) => it.imei).map((it, i) => {
@@ -119,7 +149,8 @@ export default function CustomerHistoryDrawer({ customerId, onClose }) {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
