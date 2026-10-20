@@ -72,6 +72,7 @@ export default function PrintSalePage() {
               <tr key={i}>
                 <td>
                   {it.product_name}
+                  {(it.product_code || it.barcode) && <div style={{ fontSize: 9 }}>{[it.product_code, it.barcode].filter(Boolean).join(" · ")}</div>}
                   {it.imei && <div style={{ fontSize: 9 }}>IMEI: {it.imei}</div>}
                   {it.warranty_until && <div style={{ fontSize: 9 }}>Gar.: {(it.warranty_until || "").slice(0,10)}</div>}
                 </td>
@@ -139,14 +140,15 @@ export default function PrintSalePage() {
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Përshkrimi</th><th>IMEI / Garanci</th>
+              <th>Shifra</th><th>Barkodi</th><th>Përshkrimi</th><th>IMEI / Garanci</th>
               <th className="r">Sasia</th><th className="r">Çmimi (€)</th><th className="r">Totali (€)</th>
             </tr>
           </thead>
           <tbody>
             {sale.items.map((it, i) => (
               <tr key={i}>
-                <td>{i + 1}</td>
+                <td style={{ fontFamily: "monospace", fontSize: 11 }}>{it.product_code || "—"}</td>
+                <td style={{ fontFamily: "monospace", fontSize: 11 }}>{it.barcode || "—"}</td>
                 <td>{it.product_name}</td>
                 <td style={{ fontFamily: "monospace", fontSize: 11 }}>
                   {it.imei || "—"}

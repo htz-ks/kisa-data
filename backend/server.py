@@ -655,9 +655,16 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             if not it.imei:
                 raise HTTPException(400, f"IMEI mungon për {prod['name']}")
             imeis = prod.get("imeis", []) or []
-            found = next((x for x in imeis if x["imei"] == it.imei and x["status"] == "in_stock"), None)
+            imei = it.imei.strip()
+            found = next((x for x in imeis if x["imei"] == imei), None)
+            if found and found["status"] != "in_stock":
+                raise HTTPException(400, f"IMEI {imei} është shitur më parë")
             if not found:
-                raise HTTPException(400, f"IMEI {it.imei} nuk është në stok")
+                if prod.get("quantity", 0) < 1:
+                    raise HTTPException(400, f"IMEI {imei} nuk është në stok")
+                found = {"imei": imei, "status": "in_stock"}
+                imeis.append(found)
+            it.imei = imei
             now = now_utc()
             months = int(prod.get("warranty_months", 12) or 0)
             warranty_until = (now + timedelta(days=months * 30)).isoformat() if months > 0 else None
@@ -666,8 +673,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             found["warranty_until"] = warranty_until
             await db.products.update_one(
                 {"_id": ObjectId(it.product_id)},
-                {"$set": {"imeis": imeis,
-                          "quantity": len([x for x in imeis if x["status"] == "in_stock"])}},
+                {"$set": {"imeis": imeis}, "$inc": {"quantity": -1}},
             )
             qty = 1
             warranty_info = {"warranty_months": months, "warranty_until": warranty_until}
@@ -687,6 +693,8 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             "product_id": it.product_id,
             "product_name": prod["name"],
             "product_type": prod.get("type"),
+            "product_code": prod.get("code", ""),
+            "barcode": prod.get("barcode", ""),
             "imei": it.imei,
             "quantity": qty,
             "sale_price": it.sale_price,
@@ -778,23 +786,25 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     story.append(header_tbl)
     story.append(Spacer(1, 10))
 
-    data = [["#", "Përshkrimi", "IMEI", "Sasia", "Çmimi (€)", "Totali (€)"]]
-    for i, it in enumerate(sale.get("items", []), start=1):
+    data = [["Shifra", "Barkodi", "Përshkrimi", "IMEI", "Sasia", "Çmimi (€)", "Totali (€)"]]
+    for it in sale.get("items", []):
         data.append([
-            str(i),
-            it.get("product_name", ""),
+            it.get("product_code", "") or "-",
+            it.get("barcode", "") or "-",
+            Paragraph(it.get("product_name", ""), getSampleStyleSheet()["BodyText"]),
             it.get("imei", "") or "-",
             str(it.get("quantity", 0)),
             f"{it.get('sale_price', 0):.2f}",
             f"{it.get('line_total', 0):.2f}",
         ])
 
-    items_tbl = Table(data, colWidths=[10 * mm, 70 * mm, 35 * mm, 15 * mm, 25 * mm, 25 * mm])
+    items_tbl = Table(data, colWidths=[17 * mm, 27 * mm, 50 * mm, 32 * mm, 12 * mm, 21 * mm, 21 * mm])
     items_tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0B0F17")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
+        ("ALIGN", (4, 1), (-1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
@@ -899,8 +909,7 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
                         break
                 await db.products.update_one(
                     {"_id": ObjectId(item["product_id"])},
-                    {"$set": {"imeis": imeis,
-                              "quantity": len([x for x in imeis if x["status"] == "in_stock"])}},
+                    {"$set": {"imeis": imeis}, "$inc": {"quantity": 1}},
                 )
             else:
                 await db.products.update_one(

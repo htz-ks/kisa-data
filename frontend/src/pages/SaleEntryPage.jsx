@@ -325,13 +325,15 @@ export default function SaleEntryPage() {
                       </td>
                       <td className="px-1 py-1">
                         {r._type === "phone" ? (
-                          <Select value={r.imei || "none"} onValueChange={(v) => updateRow(i, { imei: v === "none" ? "" : v })} disabled={!r.product_id}>
-                            <SelectTrigger className="h-8 bg-white border-slate-300" data-testid={`sale-imei-${i}`}><SelectValue placeholder="IMEI" /></SelectTrigger>
-                            <SelectContent className="max-h-80">
-                              <SelectItem value="none">—</SelectItem>
-                              {availableImeis.map((x) => <SelectItem key={x.imei} value={x.imei}>{x.imei}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                          <>
+                            <Input value={r.imei} list={`imeis-${i}`} placeholder="Shkruaj / skano IMEI"
+                              onChange={(e) => updateRow(i, { imei: e.target.value })}
+                              className={`h-8 bg-white border-slate-300 text-xs font-mono ${r.product_id && !r.imei ? "border-red-400" : ""}`}
+                              data-testid={`sale-imei-${i}`} />
+                            <datalist id={`imeis-${i}`}>
+                              {availableImeis.map((x) => <option key={x.imei} value={x.imei} />)}
+                            </datalist>
+                          </>
                         ) : (
                           <div className="h-8 flex items-center text-xs text-slate-400 px-2">—</div>
                         )}
