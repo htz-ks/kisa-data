@@ -212,7 +212,7 @@ export default function SaleEntryPage() {
             </div>
             <div className="md:col-span-3">
               <Label className={label}>Gjendja (borxhi aktual)</Label>
-              <Input value={`-${Number(balance).toFixed(2)}`} disabled
+              <Input value={(balance > 0 ? -balance : Math.abs(balance)).toFixed(2)} disabled
                 className={`h-9 mt-1 bg-slate-100 border-slate-300 text-right font-mono underline underline-offset-2 ${balance > 0 ? "text-red-600" : "text-slate-700"}`}
                 data-testid="sale-balance" />
             </div>

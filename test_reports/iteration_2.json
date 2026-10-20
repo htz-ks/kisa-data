@@ -1,0 +1,35 @@
+{
+  "summary": "Tested the barcode and Shifra/inline-create features end to end (backend pytest + Playwright as admin and employee). Everything requested works. Products page: Krijo Artikull dialog opens, you can type a barcode, Gjenero fills a valid 13-digit EAN starting with '20', save works and shows toast 'Produkti u shtua (P-000xx)', edit (product-edit-<id>) loads the saved values and saves, and a duplicate barcode shows the toast 'Ky barkod ekziston tashmë te një artikull tjetër' with the dialog left open. Backend: an empty barcode gets a 13-digit EAN with a valid check digit (accessory and phone), a manual barcode is trimmed, a duplicate on POST returns 400, and an employee POST returns 403. Sale entry (/sale/new): Shifra is editable; typing a code (case-insensitive, 'p-00001') or a barcode ('123456789099') and pressing Enter fills the product, price and stock; an unknown code shows an error toast. '+ Krijo artikull të ri' opens the dialog; after saving, the new product is selected in that row, Shifra shows its code, and the buyer (C1) and rows 0-1 are unchanged. A sale saved with a row filled via Shifra created INV-2026-00002 and stock dropped from 4 to 3. The employee does not see the create option, but Shifra lookup works for them.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/products/{pid}", "issue": "Does not check for duplicate barcodes (POST does). Editing product B to product A's barcode returns 200 and both products end up with the same barcode, which breaks the Shifra/barcode lookup (the first match wins). Editing can also set the barcode to an empty string."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SaleEntryPage Gjendja field", "issue": "Shows '--50.00' (double minus) when the customer balance is negative (e.g. C1 with a credit of -50) because the code always adds '-' in front. Same pre-existing logic shows '-0.00' for a zero balance.", "selector": "[data-testid='sale-balance']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Products page", "issues": ["Search does not match the product code (typing 'P-00015' finds nothing) even though Shifra is the first column; consider matching p.code too"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_product_barcode.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Add a duplicate-barcode check to update_product (exclude the product's own _id) and reject an empty barcode, or auto-generate one",
+    "Fix the Gjendja display in SaleEntryPage so it doesn't show a double minus for negative balances",
+    "Optional: let the products search match by code"
+  ],
+  "critical_code_review_comments": [
+    "SaleEntryPage Shifra onBlur calls findByCode, which calls applyProduct again. If the user edits price or quantity, then clicks into Shifra and leaves it, price and quantity reset to the product defaults.",
+    "findByCode: if the row already has a product and the user types a code that doesn't match, nothing happens and no error shows. The row keeps the old product while Shifra shows the mismatched text.",
+    "ProductFormDialog opened from SaleEntryPage uses the dark theme on a light-themed page. It works, but looks inconsistent."
+  ],
+  "updated_files": ["/app/backend/tests/test_product_barcode.py"],
+  "success_rate": {"backend": "83% (5/6; the only failure is the PUT duplicate-barcode gap)", "frontend": "100%"},
+  "seed_data_creation": "Created TEST_UI_Prod1 (P-00015) and TEST_UI_Inline (P-00016), plus pytest TEST_ products; all deleted afterwards. The test sale INV-2026-00002 (1x TEST_UI_Prod1, €9.25 cash, walk-in customer) remains because there is no sales delete endpoint. P-00014 and earlier codes were used up by the pytest products.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sale entry route is /sale/new (not /sales/new). The products list is empty until you search or filter (by design). Shadcn select options: click the trigger, then click by data-testid or role=option with force=True."
+}

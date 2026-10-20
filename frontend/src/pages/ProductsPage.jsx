@@ -76,7 +76,8 @@ export default function ProductsPage() {
   const filtered = !hasFilter ? [] : products.filter((p) => {
     const matchQ = !q || p.name.toLowerCase().includes(q.toLowerCase())
       || (p.brand || "").toLowerCase().includes(q.toLowerCase())
-      || (p.barcode || "").includes(q);
+      || (p.barcode || "").includes(q)
+      || (p.code || "").toLowerCase().includes(q.toLowerCase());
     const matchT = typeFilter === "all" || p.type === typeFilter;
     return matchQ && matchT;
   });

@@ -41,3 +41,12 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - P2: Customer purchase history drawer
 - P2: Settings page (business name, logo on invoice, tax)
 - P2: WhatsApp/SMS invoice share
+
+## Update (June 2026)
+- Shifra në Shitje: e shkruajtshme; kod (P-xxxxx) ose barkod + Enter plotëson artikullin.
+- "+ Krijo artikull të ri" brenda listës së produkteve në Shitje (vetëm admin) – dritare e shpejtë, shitja nuk humbet.
+- Barkod: shkruhet vetë ose butoni "Gjenero" (EAN-13 "20..."); bosh = gjenerohet automatikisht; kontroll për dublikatë në krijim dhe editim.
+- Forma e artikullit u nda në komponent të përbashkët: components/ProductFormDialog.jsx.
+- Kërkimi te Artikujt gjen edhe sipas Shifrës.
+## Backlog
+- P2: Ndarja e tabelës së shitjes në komponent më vete.

@@ -475,6 +475,10 @@ async def update_product(pid: str, body: ProductUpdate, _a: dict = Depends(requi
     update = {k: v for k, v in body.model_dump(exclude_none=True).items()}
     if not update:
         raise HTTPException(400, "Asgjë për të përditësuar")
+    if "barcode" in update:
+        update["barcode"] = update["barcode"].strip() or await _unique_barcode()
+        if await db.products.find_one({"barcode": update["barcode"], "_id": {"$ne": ObjectId(pid)}}):
+            raise HTTPException(400, "Ky barkod ekziston tashmë te një artikull tjetër")
     await db.products.update_one({"_id": ObjectId(pid)}, {"$set": update})
     p = await db.products.find_one({"_id": ObjectId(pid)})
     return doc_to_json(p)
