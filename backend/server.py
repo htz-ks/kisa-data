@@ -852,12 +852,20 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     story.append(items_tbl)
     story.append(Spacer(1, 10))
 
+    dd = None
+    cid = sale.get("customer_id") or ""
+    if ObjectId.is_valid(cid) and (customer := await db.customers.find_one({"_id": ObjectId(cid)})):
+        c_sales = await db.sales.find({"customer_id": cid}).to_list(1000)
+        c_pays = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
+        c_rets = await db.returns.find({"customer_id": cid}).to_list(1000)
+        dd = _sale_debts(customer, c_sales, c_pays, c_rets).get(sid)
+
     totals = [
         ["Nëntotali:", f"€ {sale.get('subtotal', 0):.2f}"],
         ["Zbritja:", f"€ {sale.get('discount', 0):.2f}"],
         ["TOTALI:", f"€ {sale.get('total', 0):.2f}"],
         ["Paguar:", f"€ {sale.get('paid_amount', 0):.2f}"],
-        ["Mbetur (Borxh):", f"€ {sale.get('due_amount', 0):.2f}"],
+        ["Borxh në faturë:", f"€ {sale.get('due_amount', 0):.2f}"],
     ]
     tot_tbl = Table(totals, colWidths=[40 * mm, 40 * mm], hAlign="RIGHT")
     tot_tbl.setStyle(TableStyle([
@@ -868,6 +876,32 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
         ("LINEABOVE", (0, 2), (-1, 2), 0.5, colors.HexColor("#233044")),
     ]))
     story.append(tot_tbl)
+
+    if dd:
+        story.append(Spacer(1, 14))
+        story.append(Paragraph("<b>Pagesat e borxhit të kësaj fature</b>", body))
+        story.append(Spacer(1, 4))
+        rows = [["Data", "Përshkrimi", "Shuma (€)", "Mbetet (€)"]]
+        left = dd["original_debt"]
+        rows.append([sale.get("created_at", "")[:16].replace("T", " "), "Borxhi i faturës", f"{left:.2f}", f"{left:.2f}"])
+        moves = [(r["date"], "Kthim malli", r["amount"]) for r in dd["returns"]] + [(p["date"], "Pagesë", p["amount"]) for p in dd["payments"]]
+        for date, label, amount in sorted(moves, key=lambda m: m[0]):
+            left = round(left - amount, 2)
+            rows.append([(date or "")[:16].replace("T", " "), label, f"-{amount:.2f}", f"{left:.2f}"])
+        rows.append(["", "BORXHI I MBETUR", "", f"{dd['remaining']:.2f}"])
+        pay_tbl = Table(rows, colWidths=[40 * mm, 60 * mm, 35 * mm, 35 * mm], hAlign="LEFT")
+        pay_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0B0F17")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#B45309")),
+            ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ]))
+        story.append(pay_tbl)
+
     story.append(Spacer(1, 20))
     story.append(Paragraph("Faleminderit për blerjen! — Kisa-Data POS", small))
 
