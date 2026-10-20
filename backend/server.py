@@ -666,7 +666,9 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             if imei in seen_imeis:
                 raise HTTPException(400, f"IMEI {imei} është vendosur dy herë në këtë faturë")
             seen_imeis.add(imei)
-            imeis = prod.setdefault("imeis", []) or []
+            if not prod.get("imeis"):
+                prod["imeis"] = []
+            imeis = prod["imeis"]
             found = next((x for x in imeis if x["imei"] == imei), None)
             if found and found["status"] != "in_stock":
                 raise HTTPException(400, f"IMEI {imei} është shitur më parë")

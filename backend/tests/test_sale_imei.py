@@ -135,3 +135,75 @@ class TestSaleImei:
             "discount": 0, "paid_amount": 155, "payment_method": "cash"})
         assert r.status_code == 400
         assert getp(s, acc["id"])["quantity"] == 5, "accessory stock decremented although sale failed"
+
+
+def post_sale(s, items):
+    r = s.post(f"{BASE_URL}/api/sales", json={"customer_id": "", "items": items, "discount": 0, "paid_amount": 0, "payment_method": "cash"})
+    if r.status_code == 200:
+        created_sales.append(r.json()["id"])
+    return r
+
+
+# Iteration 5: two-phase validation of POST /api/sales
+class TestSaleAtomic:
+    def test_duplicate_imei_same_request(self, s):
+        acc = s.post(f"{BASE_URL}/api/products", json={"name": "TEST_IMEI_acc2", "type": "accessory", "quantity": 5, "sale_price": 5}).json()
+        created_products.append(acc["id"])
+        ph = mkprod(s, name="TEST_IMEI_dup", imeis=["TESTDUP1", "TESTDUP2"])
+        r = post_sale(s, [{"product_id": acc["id"], "quantity": 2, "sale_price": 5},
+                          {"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTDUP1"},
+                          {"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": " TESTDUP1 "}])
+        assert r.status_code == 400 and "vendosur dy herë" in r.json()["detail"], r.text
+        assert getp(s, acc["id"])["quantity"] == 5
+        g = getp(s, ph["id"])
+        assert g["quantity"] == 2 and all(x["status"] == "in_stock" for x in g["imeis"])
+
+    def test_insufficient_stock_later_row_no_side_effects(self, s):
+        ph = mkprod(s, name="TEST_IMEI_first", imeis=["TESTFIRST1"], quantity=1)
+        acc = s.post(f"{BASE_URL}/api/products", json={"name": "TEST_IMEI_acc3", "type": "accessory", "quantity": 1, "sale_price": 5}).json()
+        created_products.append(acc["id"])
+        r = post_sale(s, [{"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTFIRST1"},
+                          {"product_id": acc["id"], "quantity": 3, "sale_price": 5}])
+        assert r.status_code == 400 and "pamjaftueshme" in r.json()["detail"]
+        g = getp(s, ph["id"])
+        assert g["quantity"] == 1 and g["imeis"][0]["status"] == "in_stock"
+
+    def test_same_accessory_two_rows_sum(self, s):
+        acc = s.post(f"{BASE_URL}/api/products", json={"name": "TEST_IMEI_acc4", "type": "accessory", "quantity": 3, "sale_price": 5}).json()
+        created_products.append(acc["id"])
+        r = post_sale(s, [{"product_id": acc["id"], "quantity": 2, "sale_price": 5}, {"product_id": acc["id"], "quantity": 2, "sale_price": 5}])
+        assert r.status_code == 400 and "pamjaftueshme" in r.json()["detail"]
+        assert getp(s, acc["id"])["quantity"] == 3
+        r = post_sale(s, [{"product_id": acc["id"], "quantity": 2, "sale_price": 5}, {"product_id": acc["id"], "quantity": 1, "sale_price": 5}])
+        assert r.status_code == 200, r.text
+        assert getp(s, acc["id"])["quantity"] == 0
+
+    def test_mixed_registered_and_unregistered(self, s):
+        # qty 2, 1 registered IMEI -> one unknown IMEI allowed, second unknown rejected
+        ph = mkprod(s, name="TEST_IMEI_mixed", imeis=["TESTMIX1"], quantity=2)
+        mdb.products.update_one({"_id": ObjectId(ph["id"])}, {"$set": {"quantity": 2}})  # create forces qty=len(imeis)
+        r = post_sale(s, [{"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTNEWA"},
+                          {"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTNEWB"}])
+        assert r.status_code == 400 and "nuk është në stok" in r.json()["detail"]
+        assert getp(s, ph["id"])["quantity"] == 2
+        r = post_sale(s, [{"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTMIX1"},
+                          {"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTNEWA"}])
+        assert r.status_code == 200, r.text
+        g = getp(s, ph["id"])
+        assert g["quantity"] == 0 and all(x["status"] == "sold" for x in g["imeis"]) and len(g["imeis"]) == 2
+
+    def test_valid_phone_plus_accessory_and_return(self, s):
+        ph = mkprod(s, name="TEST_IMEI_valid", imeis=["TESTVAL1"], quantity=1)
+        acc = s.post(f"{BASE_URL}/api/products", json={"name": "TEST_IMEI_acc5", "type": "accessory", "quantity": 4, "sale_price": 5}).json()
+        created_products.append(acc["id"])
+        r = post_sale(s, [{"product_id": ph["id"], "quantity": 1, "sale_price": 150, "imei": "TESTVAL1"},
+                          {"product_id": acc["id"], "quantity": 2, "sale_price": 5}])
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["total"] == 160 and d["items"][0]["imei"] == "TESTVAL1"
+        assert getp(s, acc["id"])["quantity"] == 2 and getp(s, ph["id"])["quantity"] == 0
+        rr = s.post(f"{BASE_URL}/api/sales/{d['id']}/return", json={"items": [{"index": 0, "quantity": 1}, {"index": 1, "quantity": 2}], "reason": "TEST"})
+        assert rr.status_code == 200, rr.text
+        assert getp(s, acc["id"])["quantity"] == 4
+        g = getp(s, ph["id"])
+        assert g["quantity"] == 1 and g["imeis"][0]["status"] == "in_stock"

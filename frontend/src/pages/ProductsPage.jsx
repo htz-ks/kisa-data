@@ -71,6 +71,17 @@ export default function ProductsPage() {
     setOpen(true);
   };
 
+  const del = async (id) => {
+    if (!window.confirm("Sigurt që dëshiron ta fshish këtë produkt?")) return;
+    try {
+      await api.delete(`/products/${id}`);
+      toast.success("Produkti u fshi");
+      await load();
+    } catch (e) {
+      toast.error(formatApiErrorDetail(e.response?.data?.detail));
+    }
+  };
+
 
   const hasFilter = !!q.trim() || typeFilter !== "all";
   const filtered = !hasFilter ? [] : products.filter((p) => {

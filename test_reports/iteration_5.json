@@ -1,0 +1,35 @@
+{
+  "summary": "Retest of the iteration_4 fixes. Backend: test_sale_imei.py has 13 tests (8 old + 5 new for two-phase validation); after one fix by the testing agent, 13/13 pass. I found and FIXED a REGRESSION in create_sale: `imeis = prod.setdefault('imeis', []) or []` created a separate list when the product had imeis == [] (any phone saved without IMEIs). A typed IMEI was never saved to the product, so the same IMEI could be sold again and returns could not restore it. Changed to `if not prod.get('imeis'): prod['imeis'] = []; imeis = prod['imeis']`, verified. All requested backend checks pass: accessory + phone with empty IMEI gives 400 and stock is unchanged; duplicate IMEI (also with spaces) gives 'vendosur dy herë' with no stock or IMEI change; a whitespace IMEI gives 'IMEI mungon'; an unknown IMEI is accepted only when qty > in_stock IMEIs (mixed case: 2 unknown rejected, 1 registered + 1 unknown accepted); two rows of the same accessory are summed against stock; a failed later row leaves earlier rows untouched; a valid phone + accessory sale and a full return restore stock and IMEI status. Frontend (Playwright, admin): P-00002 + Enter fills IMEI001, the 2nd row fills IMEI002; each datalist leaves out the IMEI used in the other row; saving a duplicate IMEI shows the toast 'IMEI IMEI001 është vendosur dy herë' and saving an empty (spaces) IMEI shows 'Shkruaj IMEI për iPhone T', both without calling the API. Toasts now appear bottom-right (y~1002) and do not cover Ruaj (y=37). A 13-digit barcode and a 15-digit IMEI fit fully (scrollWidth == clientWidth). A real UI sale (P-00002 IMEI001 + P-00006 scanned by barcode) saved INV-2026-00026 and stock went 3->2 / 15->14. /print/sale/<id>?format=a4 and ?format=80 have a white body and #111 text and show Shifra/Barkodi/Përshkrimi/IMEI correctly.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/sales", "issue": "REGRESSION (FIXED by testing agent): for a phone whose imeis field was [], the typed IMEI was not saved (prod.setdefault(...) or [] made a detached list). The same IMEI could be sold twice. Fixed in server.py create_sale.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/sales", "issue": "Phase 2 still uses non-atomic $set of the whole imeis array plus $inc quantity, with no transaction or optimistic check. Two sales at the same time could both sell the same IMEI or overwrite each other's IMEI status. Low risk for a single shop; consider a conditional update (filter on imeis.status: in_stock)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/sale/new", "issues": ["Seeded P-00002 'iPhone T' has no barcode, so Barkodi shows '—' on the invoice (data, not code)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_sale_imei.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Review the testing agent's fix in server.py create_sale (imeis list handling for empty arrays)",
+    "Optional: make the phase-2 IMEI update conditional or atomic to guard against two sales at the same time"
+  ],
+  "critical_code_review_comments": [
+    "create_sale: watch for `x.setdefault(k, []) or []` patterns elsewhere; they silently drop changes when the stored value is an empty list",
+    "POST /api/products forces quantity = len(imeis) when IMEIs are given (by design, but tests that need qty > registered IMEIs must set quantity directly)",
+    "findByCode on blur still re-applies the product and resets a manually edited price/IMEI (from iteration_4, not changed)",
+    "server.py is >1200 lines; split it into routers"
+  ],
+  "updated_files": ["/app/backend/server.py", "/app/backend/tests/test_sale_imei.py"],
+  "success_rate": {"backend": "100% (13/13 after fixing the regression; 12/13 before)", "frontend": "100%"},
+  "seed_data_creation": "All TEST_* products/sales/returns deleted. UI sale INV-2026-00026 was returned (P-00002 IMEI001 back to in_stock, qty 3; P-00006 back to 15), then the sale and return docs were deleted. Invoice numbers up to 00026 were used up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_sale_imei.py cleans up via MongoDB (backend/pytest.ini adds -n xdist). TestSaleAtomic covers the two-phase validation. Use the print page with add_init_script('window.print=()=>{}'). Toasts are bottom-right now."
+}
