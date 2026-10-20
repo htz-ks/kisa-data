@@ -69,7 +69,7 @@ export default function PurchasesPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
-      <PageHeader title="Blerjet" subtitle="Hyrja e produkteve nga furnitorët"
+      <PageHeader title="Blerjet" subtitle="Hyrja e produkteve nga furnitorët dhe qytetarët"
         action={<Button onClick={() => setOpen(true)} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="purchase-create-btn"><Plus className="w-4 h-4 mr-1" /> Blerje e re</Button>} />
 
       <div className="data-grid bg-[#0D131E]">

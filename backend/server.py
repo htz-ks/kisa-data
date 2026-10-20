@@ -466,6 +466,13 @@ async def create_product(body: ProductIn, user: dict = Depends(require_admin)):
     src = doc.pop("purchase", None)
     if src and src["seller_type"] == "citizen" and not (src.get("citizen_name") or "").strip():
         raise HTTPException(400, "Shkruaj emrin e qytetarit nga i cili e bleve")
+    if src and src["seller_type"] == "supplier":
+        sid = src.get("supplier_id") or ""
+        if sid and (not ObjectId.is_valid(sid) or not await db.suppliers.find_one({"_id": ObjectId(sid)})):
+            raise HTTPException(400, "Furnitori nuk u gjet")
+        qty = len(doc.get("imeis") or []) or doc["quantity"]
+        if not sid and (src.get("paid_amount") or 0) < doc["cost_price"] * qty:
+            raise HTTPException(400, "Zgjidh furnitorin që të regjistrohet borxhi")
     imei_list = doc.pop("imeis", []) or []
     if doc["type"] == "phone":
         doc["imeis"] = [{"imei": i, "status": "in_stock"} for i in imei_list]

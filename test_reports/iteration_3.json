@@ -1,0 +1,34 @@
+{
+  "summary": "Tested the purchase section in the 'Krijo Artikull' form end to end: backend pytest (15 tests including the iteration_2 barcode regression, 14 passed) and Playwright as admin. Everything requested works. The purchase section shows on create and not on edit. Supplier flow: cost 10 x qty 5 shows a total of € 50.00 with paid prefilled to 50.00; changing paid to 20 shows 'Borxh: € 30.00'; after saving, stock is 5, Blerjet lists the supplier with 50/20/30, and the supplier balance went up by 30. Citizen flow: a phone with 1 IMEI and cost 100 is saved with qty 1; Blerjet shows 'Name (qytetar · PN)'; GET /api/citizens returns the citizen without _id; typing the same name again fills in the phone and personal no; the same personal no updates the existing citizen instead of making a duplicate. A citizen with no name shows the toast 'Shkruaj emrin e qytetarit nga i cili e bleve' and nothing is saved. Quantity 0 or no purchase field creates no purchase. Paid above the total is capped at the total. A phone with a typed quantity and no IMEI keeps that quantity. Employee gets 403 on POST /products and GET /citizens. Regression on /sale/new: barcode 123456789099 + Enter fills row 0; '+ Krijo artikull të ri' opens the dialog with the purchase section, Gjenero makes a 13-digit EAN, and after saving the new product is selected in row 1 with row 0 unchanged.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/products", "issue": "An invalid purchase.supplier_id (e.g. 'not-an-objectid') returns 500. The product and the purchase are already saved before ObjectId() fails in the supplier balance update, so the data is left half-written. Only reachable through the API; the UI always sends a valid id."},
+      {"endpoint": "POST /api/products", "issue": "seller_type=supplier with no supplier picked ('— Pa furnitor —') and paid < total saves a purchase with a due amount, but the debt is not tracked on any supplier."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Blerjet page", "issues": ["Subtitle still says 'Hyrja e produkteve nga furnitorët' even though citizen purchases now appear there (minor)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_product_purchase.py", "/app/backend/tests/test_product_barcode.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "In create_product/_record_product_purchase, check purchase.supplier_id (valid ObjectId that exists) before inserting the product; return 400/404",
+    "Optional: when seller_type=supplier and paid < total, require a supplier"
+  ],
+  "critical_code_review_comments": [
+    "create_product is not atomic: product insert, citizen upsert, purchase insert and supplier $inc are separate writes, so a failure partway leaves partial data",
+    "Deleting a product does not touch the purchase that was auto-created for it or the supplier debt from it",
+    "pickCitizen auto-fills by name only (first match); two citizens with the same name but different personal numbers cannot be told apart in the datalist",
+    "server.py is 1220+ lines; should be split into routers"
+  ],
+  "updated_files": ["/app/backend/tests/test_product_purchase.py"],
+  "success_rate": {"backend": "93% (14/15; the 1 failure is the invalid supplier_id edge case)", "frontend": "100%"},
+  "seed_data_creation": "Created TEST_PP_*/TEST_UI_* products, suppliers and citizens plus their purchases; all deleted afterwards. Only test suppliers were used, so no real supplier balances changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_product_purchase.py cleans up after itself via MongoDB (it reads /app/backend/.env). The UI flow uses supplier 'TEST_UI_Supplier'; create it through the API before running. Selectors: product-purchase-section, product-seller-type-select, product-supplier-select, product-citizen-*-input, product-purchase-total, product-purchase-paid-input."
+}
