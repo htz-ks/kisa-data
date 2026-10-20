@@ -1207,7 +1207,7 @@ async def export_stock_csv(_a: dict = Depends(require_admin)):
 # ---------- Customer history ----------
 @api.get("/customers/{cid}/history")
 async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
-    customer = await db.customers.find_one({"_id": ObjectId(cid)})
+    customer = await db.customers.find_one({"_id": ObjectId(cid)}) if ObjectId.is_valid(cid) else None
     if not customer:
         raise HTTPException(404, "Klienti nuk u gjet")
     sales = await db.sales.find({"customer_id": cid}).sort("created_at", -1).to_list(1000)
@@ -1222,16 +1222,25 @@ async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
         "sales": [doc_to_json(s) for s in sales],
         "payments": [doc_to_json(p) for p in payments],
         "totals": totals,
-        "ledger": _debt_ledger(customer, sales, payments),
+        "ledger": _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000)),
     }
 
 
-def _debt_ledger(customer: dict, sales: list, payments: list) -> list:
+def _debt_ledger(customer: dict, sales: list, payments: list, returns: list) -> list:
     """Chronological debt history with running balance (oldest first)."""
-    events = [
-        {"date": s.get("created_at", ""), "kind": "sale", "doc": s.get("invoice_no", ""), "sale_id": str(s["_id"]),
-         "total": s.get("total", 0), "paid": s.get("paid_amount", 0), "debt": s.get("due_amount", 0) or 0}
-        for s in sales if (s.get("due_amount", 0) or 0) > 0
+    reduced: dict = {}
+    for r in returns:
+        reduced[r.get("sale_id")] = reduced.get(r.get("sale_id"), 0) + (r.get("debt_reduction", 0) or 0)
+    events = []
+    for s in sales:
+        debt = (s.get("due_amount", 0) or 0) + reduced.get(str(s["_id"]), 0)
+        if debt > 0:
+            events.append({"date": s.get("created_at", ""), "kind": "sale", "doc": s.get("invoice_no", ""), "sale_id": str(s["_id"]),
+                           "total": s.get("total", 0), "paid": s.get("paid_amount", 0), "debt": debt})
+    events += [
+        {"date": r.get("created_at", ""), "kind": "return", "doc": f"Kthim {r.get('invoice_no', '')}", "total": 0,
+         "paid": 0, "debt": -(r.get("debt_reduction", 0) or 0)}
+        for r in returns if (r.get("debt_reduction", 0) or 0) > 0
     ] + [
         {"date": p.get("created_at", ""), "kind": "payment", "doc": "Pagesë", "total": 0,
          "paid": p.get("amount", 0), "debt": -(p.get("amount", 0) or 0)}
@@ -1255,7 +1264,7 @@ async def customer_statement_pdf(cid: str, _u: dict = Depends(get_current_user))
         raise HTTPException(404, "Klienti nuk u gjet")
     sales = await db.sales.find({"customer_id": cid}).to_list(1000)
     payments = await db.payments.find({"entity_type": "customer", "entity_id": cid}).to_list(1000)
-    ledger = _debt_ledger(customer, sales, payments)
+    ledger = _debt_ledger(customer, sales, payments, await db.returns.find({"customer_id": cid}).to_list(1000))
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)

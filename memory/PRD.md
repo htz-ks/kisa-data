@@ -57,3 +57,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Krijo/Edito Artikull: seksion IMEI për telefona (edhe në editim, add_imeis), IMEI i shkruar ruhet edhe pa Enter, unik mes artikujve (në stok). IMEI del automatikisht te Shitja.
 - Shifra: numër rendor i thjeshtë (1, 2, 3...), kodet e vjetra P-0000X u kthyen në numra.
 - Pagesa/Borxhe: lista e klientëve/furnitorëve me borxh; kolona Pagesa + Mbetet (llogaritet vetë), butoni Paguaj; historiku me borxhin para/pas; validim shuma >0 dhe ≤ borxhi.
+- Pagesa/Borxhe: klik te klienti → historia e borxhit (fatura me borxh, pagesa, kthime, gjendja), WhatsApp dhe PDF A4 (/api/customers/{id}/statement.pdf).

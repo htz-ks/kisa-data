@@ -1,0 +1,34 @@
+{
+  "summary": "Tested Pagesa/Borxhe debts feature end-to-end (backend pytest 10/10 after 1 fix + Playwright UI). Debtor list (customers & suppliers with balance>0, sorted desc), live remaining calc (700-200=500), payment save + balance update + history row (Borxhi para/Pagesa/Mbeti), 0 and over-payment rejection (UI + API), customer history drawer with chronological ledger and running balance, WhatsApp wa.me link, statement PDF A4 (200 application/pdf, contains BORXHI AKTUAL + ledger, 404 invalid id, 401 unauth), and /customers drawer regression all PASS.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/customers/{cid}/history", "issue": "Invalid ObjectId returned 500 (bson InvalidId). FIXED by testing agent with ObjectId.is_valid guard -> 404."},
+      {"endpoint": "_debt_ledger", "issue": "Returns (POST /sales/{sid}/return) reduce customer balance and sale.due_amount but are not ledger events; the difference is pushed into a synthetic 'Gjendja fillestare' opening row and the original sale row shows the reduced due_amount, so history after a return is not truly chronological. Consider adding return events to ledger."},
+      {"endpoint": "PUT/DELETE /api/customers/{cid}, GET /api/sales/{sid}, invoice.pdf", "issue": "Still use ObjectId(cid) without is_valid -> 500 on malformed id (pre-existing pattern)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Pagesa/Borxhe + Klientët history drawer", "issues": ["Drawer is dark (#0D131E) while the page is a light theme - visually inconsistent but readable", "Supplier names are not clickable (no history/PDF for suppliers) - acceptable per scope, but user may expect parity"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_debts_ledger.py", "/app/backend/tests/seed_debt_ui.py", "/app/test_reports/pytest/pytest_debts.xml"],
+  "action_items": [
+    "Optional: include return events in _debt_ledger so ledger stays chronological after returns",
+    "Optional: guard remaining ObjectId(...) calls with ObjectId.is_valid to avoid 500s"
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1370+ lines - should be split into routers (customers, sales, payments, pdf)",
+    "customer_history sorts sales/payments desc then _debt_ledger re-sorts by created_at string - fine, but document_date (user-entered) is ignored for ledger ordering",
+    "Real customer 'Pllata' balance is 650 (not 700): a 50€ payment was created at 2026-10-20T15:18 BEFORE this testing session started (not by testing agent) - main agent/user should confirm it was intentional"
+  ],
+  "updated_files": ["/app/backend/server.py (customer_history invalid id guard)", "/app/backend/tests/test_debts_ledger.py", "/app/backend/tests/seed_debt_ui.py"],
+  "success_rate": {"backend": "100% (10/10 after fix)", "frontend": "100%"},
+  "seed_data_creation": "TEST_ customers/supplier/product/sales/payments created and fully cleaned (seed_debt_ui.py clean). Invoice numbers INV-2026-00057..00061 were consumed by test sales (gaps in sequence).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use test_debts_ledger.py for regression (self-cleaning). For UI, run `python /app/backend/tests/seed_debt_ui.py seed` (prints ids) and `... clean` afterwards. Don't pay real customers (Pllata=650). PDF button uses window.open with cookie auth - works."
+}
