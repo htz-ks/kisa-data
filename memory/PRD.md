@@ -50,3 +50,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Kërkimi te Artikujt gjen edhe sipas Shifrës.
 ## Backlog
 - P2: Ndarja e tabelës së shitjes në komponent më vete.
+- Kolona "Barkodi" në Shitje: skanim me skaner/tastierë + Enter ose me kamerë; gjen artikullin sipas barkodit (ose IMEI-t në stok); shton dhe fokuson rresht të ri automatikisht.
