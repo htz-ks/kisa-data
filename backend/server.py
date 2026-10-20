@@ -1252,6 +1252,31 @@ async def export_stock_csv(_a: dict = Depends(require_admin)):
     return _csv_response(rows, f"stoku_{datetime.now().strftime('%Y%m%d')}.csv")
 
 
+# ---------- Customer cards (overview of all buyers) ----------
+@api.get("/customer-cards")
+async def customer_cards(_a: dict = Depends(require_admin)):
+    sales_agg = {d["_id"]: d async for d in db.sales.aggregate([
+        {"$match": {"customer_id": {"$nin": [None, ""]}}},
+        {"$group": {"_id": "$customer_id", "bought": {"$sum": "$total"}, "paid_at_sale": {"$sum": "$paid_amount"},
+                    "count": {"$sum": 1}, "last": {"$max": "$created_at"}}},
+    ])}
+    pay_agg = {d["_id"]: d["sum"] async for d in db.payments.aggregate([
+        {"$match": {"entity_type": "customer"}}, {"$group": {"_id": "$entity_id", "sum": {"$sum": "$amount"}}},
+    ])}
+    out = []
+    async for c in db.customers.find({}).sort("name", 1):
+        cid = str(c["_id"])
+        sa = sales_agg.get(cid, {})
+        out.append({
+            "id": cid, "name": c.get("name", ""), "phone": c.get("phone", ""),
+            "invoices": sa.get("count", 0), "last_purchase": sa.get("last"),
+            "bought": round(sa.get("bought", 0), 2),
+            "paid": round(sa.get("paid_at_sale", 0) + pay_agg.get(cid, 0), 2),
+            "balance": round(c.get("balance", 0) or 0, 2),
+        })
+    return out
+
+
 # ---------- Customer history ----------
 @api.get("/customers/{cid}/history")
 async def customer_history(cid: str, _u: dict = Depends(get_current_user)):
@@ -1468,12 +1493,15 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str, descs: di
         ("FONTSIZE", (0, 0), (-1, -1), 8),
     ]))
     story += [tbl, Spacer(1, 12)]
-    tot = Table([["BORXHI AKTUAL:", f"€ {(customer.get('balance', 0) or 0):.2f}"]], colWidths=[45 * mm, 40 * mm], hAlign="RIGHT")
+    bal = customer.get("balance", 0) or 0
+    settled = bal <= 0.004 and len(ledger) > 0
+    tot_rows = [["BORXHI AKTUAL:", f"€ {bal:.2f}"]] + ([["", "PAGUAR PLOTËSISHT"]] if settled else [])
+    tot = Table(tot_rows, colWidths=[45 * mm, 50 * mm], hAlign="RIGHT")
     tot.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
         ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 12),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#B45309")),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#047857") if settled else colors.HexColor("#B45309")),
     ]))
     story += [tot]
     story += [Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]

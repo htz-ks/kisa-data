@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
-  FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, Undo2,
+  FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, IdCard, Undo2,
   ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ const NAV = [
     key: "finance", icon: Wallet, label: "Financa", roles: ["admin"],
     children: [
       { to: "/payments", icon: CreditCard, label: "Pagesa / Borxhe", roles: ["admin"], tid: "nav-payments" },
+      { to: "/customer-cards", icon: IdCard, label: "Kartela e blerësve", roles: ["admin"], tid: "nav-customer-cards" },
       { to: "/reports", icon: BarChart3, label: "Raportet", roles: ["admin"], tid: "nav-reports" },
     ],
   },

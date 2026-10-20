@@ -13,7 +13,7 @@ export const waPhone = (raw) => {
 };
 
 // Share the statement as a picture only (no text)
-const shareImage = async (path, customer, phone) => {
+export const shareImage = async (path, customer, phone) => {
   const { data } = await api.get(path, { responseType: "blob" });
   const file = new File([data], `borxhi-${(customer.name || "klient").replace(/[^a-zA-Z0-9]/g, "")}.png`, { type: "image/png" });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -28,7 +28,7 @@ const shareImage = async (path, customer, phone) => {
   window.open(`https://wa.me/${phone}`, "_blank", "noopener");
 };
 
-export const DebtActions = ({ customer, pdfPath }) => {
+export const DebtActions = ({ customer, pdfPath, compact = false }) => {
   const phone = waPhone(customer.phone);
   const [busy, setBusy] = useState(false);
   const send = async () => {
@@ -37,6 +37,16 @@ export const DebtActions = ({ customer, pdfPath }) => {
     catch { toast.error("Fotoja nuk u krijua, provo përsëri"); }
     finally { setBusy(false); }
   };
+  if (compact) return (
+    <div className="flex gap-2 justify-end">
+      <Button size="sm" onClick={send} disabled={busy} className="bg-[#25D366] hover:bg-[#1ebe5a] text-white font-semibold" data-testid={`card-whatsapp-${customer.id}`}>
+        {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-1" />} WhatsApp
+      </Button>
+      <Button size="sm" onClick={() => window.open(`${API}${pdfPath}`, "_blank")} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid={`card-pdf-${customer.id}`}>
+        <FileText className="w-4 h-4 mr-1" /> PDF A4
+      </Button>
+    </div>
+  );
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-3">
