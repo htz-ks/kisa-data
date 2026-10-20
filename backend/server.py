@@ -889,19 +889,24 @@ async def list_payments(_u: dict = Depends(require_admin)):
 
 @api.post("/payments")
 async def create_payment(body: PaymentIn, user: dict = Depends(get_current_user)):
+    if body.amount <= 0:
+        raise HTTPException(400, "Shuma duhet të jetë më e madhe se 0")
+    collection = db.customers if body.entity_type == "customer" else db.suppliers
+    if not ObjectId.is_valid(body.entity_id) or not (ent := await collection.find_one({"_id": ObjectId(body.entity_id)})):
+        raise HTTPException(404, "Klienti/furnitori nuk u gjet")
+    before = round(ent.get("balance", 0) or 0, 2)
+    if body.amount > before + 0.001:
+        raise HTTPException(400, f"Pagesa është më e madhe se borxhi ({before:.2f} €)")
     doc = body.model_dump()
     doc.update({
+        "balance_before": before,
+        "balance_after": round(before - body.amount, 2),
         "created_at": now_utc().isoformat(),
         "created_by": user["id"],
     })
     r = await db.payments.insert_one(doc)
     doc["_id"] = r.inserted_id
-
-    collection = db.customers if body.entity_type == "customer" else db.suppliers
-    delta = -body.amount  # payment reduces outstanding balance
-    await collection.update_one(
-        {"_id": ObjectId(body.entity_id)}, {"$inc": {"balance": delta}}
-    )
+    await collection.update_one({"_id": ent["_id"]}, {"$inc": {"balance": -body.amount}})
     return doc_to_json(doc)
 
 
