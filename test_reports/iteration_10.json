@@ -1,0 +1,24 @@
+{
+  "summary": "Tested the Shitja vendore warranty changes: 0/'Pa garanci' option in the warranty picker, 'Pa garanci' as the untouched default, retail-only A4 warranty terms, the 'Ruaj & Printo A4' button and the warranty-terms settings endpoint. Backend: 17/17 pytest passed (9 new + 8 regression from iteration_9). Frontend: every requested flow verified end-to-end with Playwright. No bugs found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Print A4 terms", "issues": ["Terms font is 8.5px, legible but very small when printed (needed to fit on one A4 page; acceptable)", "Heading detection is a heuristic: any all-caps line is printed bold (e.g. a custom line typed in all caps). Expected behaviour."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_sale_warranty_terms.py", "/app/backend/tests/test_sale_warranty.py", "/app/test_reports/pytest/pytest_results_iter10.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PrintSalePage always calls window.print() on load; the ?auto=1 param is never read (harmless, since it auto-printed before too)",
+    "Backend labels warranty_days=0 as '0 ditë' internally, but a label is only stored when days>0, so nothing leaks to the output",
+    "server.py is 1660+ lines; consider splitting into routers"
+  ],
+  "updated_files": ["/app/backend/tests/test_sale_warranty_terms.py (new)", "/app/backend/tests/seed_warranty_ui.py (phone now has 5 IMEIs + wholesale_price)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "TEST_UIW_* products and their sales were created and then deleted. The settings key 'warranty_terms' was deleted, so the default text is back.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified: trigger default 'Pa garanci'; menu has '0 · Pa garanci'; days grid 0..100 (101 buttons), 0 resets to 'Pa garanci'; 12 month options. Status text correct for retail+warranty, wholesale and no-warranty cases. Untouched warranty on a phone (product default 12m) gives warranty_until null and empty terms. Retail + 10 days print shows the terms block with bold headings, the edited per-sale text and Shitësi/Blerësi lines. Wholesale + 3 months and retail + day 0 show no terms block. Ruaj & Printo A4 navigates to /print/sale/<id>?format=a4&auto=1 and calls window.print once. Mbyll goes to /sales. Ruaj goes to /sales. Admin save of terms persists across reload. Employee gets 403 on PUT, anonymous gets 401/403."
+}

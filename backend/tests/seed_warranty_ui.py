@@ -13,8 +13,8 @@ if sys.argv[1] == "seed":
     s.headers["Authorization"] = f"Bearer {t}"
     for body in [
         {"name": "TEST_UIW_acc", "type": "accessory", "cost_price": 5, "sale_price": 10, "quantity": 20},
-        {"name": "TEST_UIW_phone", "type": "phone", "cost_price": 100, "sale_price": 150, "quantity": 2,
-         "warranty_months": 12, "imeis": ["TESTUIW0001", "TESTUIW0002"]},
+        {"name": "TEST_UIW_phone", "type": "phone", "cost_price": 100, "sale_price": 150, "quantity": 5, "wholesale_price": 120,
+         "warranty_months": 12, "imeis": ["TESTUIW0001", "TESTUIW0002", "TESTUIW0003", "TESTUIW0004", "TESTUIW0005"]},
     ]:
         r = s.post(f"{BASE}/api/products", json=body)
         print(r.status_code, r.json().get("id"), r.json().get("name"))

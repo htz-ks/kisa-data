@@ -69,3 +69,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Shitja vendore: hoqa Limiti/Gjendja; shtova Garancioni (butona 1–12 muaj + shkrim i lirë, vlen për të gjithë artikujt); Përshkrimi me kërkim (shkruaj emër/shifër/barkod) + "Krijo artikull: <tekst>".
 - Garancioni: dropdown si Çmimorja (Sipas artikullit, 1–12 muaj) + shkrim i lirë me njësi ditë/muaj; muajt llogariten si muaj kalendarikë; fatura tregon "Garanci X deri: data".
 - Garancioni: klik "ditë" → rrjetë 1–100 ditë me klik; "muaj" → lista 1–12 muaj.
+- Kushtet e garancionit (tekst i ndryshueshëm, /api/settings/warranty-terms) printohen në A4 vetëm për shitje me pakicë me garanci, me nënshkrime Shitësi/Blerësi. Garancioni: parazgjedhje "Pa garanci" (0). Butoni "Ruaj & Printo A4".
