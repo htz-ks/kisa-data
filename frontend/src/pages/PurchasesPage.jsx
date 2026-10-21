@@ -11,7 +11,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Truck, PackagePlus } from "lucide-react";
+import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
+import { ProductFormDialog } from "@/components/ProductFormDialog";
 import { toast } from "sonner";
 
 export default function PurchasesPage() {
@@ -25,6 +27,24 @@ export default function PurchasesPage() {
   const [paid, setPaid] = useState(0);
   const [items, setItems] = useState([{ product_id: "", quantity: 1, cost_price: 0, imeis: [], imeiInput: "" }]);
   const [notes, setNotes] = useState("");
+  const [newSupplier, setNewSupplier] = useState(false);
+  const [newProduct, setNewProduct] = useState(false);
+
+  const onSupplierCreated = async (sup) => {
+    const { data } = await api.get("/suppliers");
+    setSuppliers(data);
+    setSupplierId(sup.id);
+  };
+  // new article goes straight into this purchase (first empty row, or a new row)
+  const onProductCreated = async (prod) => {
+    const { data } = await api.get("/products");
+    setProducts(data);
+    const row = { product_id: prod.id, quantity: 1, cost_price: prod.cost_price || 0, imeis: [], imeiInput: "" };
+    setItems((p) => {
+      const empty = p.findIndex((i) => !i.product_id);
+      return empty >= 0 ? p.map((it, i) => (i === empty ? row : it)) : [...p, row];
+    });
+  };
 
   const load = async () => {
     const [p, pr, s] = await Promise.all([api.get("/purchases"), api.get("/products"), api.get("/suppliers")]);
@@ -168,7 +188,15 @@ export default function PurchasesPage() {
                   </div>
                 );
               })}
-              <Button variant="outline" onClick={addRow} data-testid="purchase-add-row-btn"><Plus className="w-4 h-4 mr-1" /> Shto artikull</Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={addRow} data-testid="purchase-add-row-btn"><Plus className="w-4 h-4 mr-1" /> Shto artikull</Button>
+                <Button variant="outline" onClick={() => setNewSupplier(true)} className="border-violet-500/60 text-violet-300" data-testid="purchase-new-supplier-btn">
+                  <Truck className="w-4 h-4 mr-1" /> Shto furnitor
+                </Button>
+                <Button variant="outline" onClick={() => setNewProduct(true)} className="border-emerald-500/60 text-emerald-300" data-testid="purchase-new-product-btn">
+                  <PackagePlus className="w-4 h-4 mr-1" /> Krijo artikull
+                </Button>
+              </div>
             </div>
 
             <div><Label>Shënime</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 bg-slate-900 border-slate-800" /></div>
@@ -183,6 +211,8 @@ export default function PurchasesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QuickCustomerDialog kind="supplier" open={newSupplier} onOpenChange={setNewSupplier} onCreated={onSupplierCreated} />
+      <ProductFormDialog catalogOnly open={newProduct} onOpenChange={setNewProduct} onSaved={onProductCreated} />
     </div>
   );
 }

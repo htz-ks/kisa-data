@@ -94,7 +94,7 @@ export function generateEan13() {
   return d + ((10 - (sum % 10)) % 10);
 }
 
-export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial = EMPTY_PRODUCT, onSaved }) => {
+export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial = EMPTY_PRODUCT, onSaved, catalogOnly = false }) => {
   const [form, setForm] = useState(initial);
   const [imeiInput, setImeiInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -153,7 +153,8 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
         low_stock_threshold: Number(form.low_stock_threshold) || 0,
         warranty_months: Number(form.warranty_months) || 0,
       };
-      if (!editId) payload.purchase = { ...src, paid_amount: Number(paidValue) || 0 };
+      if (catalogOnly) { payload.quantity = 0; payload.imeis = []; }
+      else if (!editId) payload.purchase = { ...src, paid_amount: Number(paidValue) || 0 };
       let data;
       if (editId) {
         delete payload.imeis;
@@ -221,7 +222,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
             </div>
             {!editId && <div className="text-[11px] text-slate-500 mt-1">Nëse e lë bosh, gjenerohet automatikisht.</div>}
           </div>
-          {form.type === "phone" && (
+          {form.type === "phone" && !catalogOnly && (
             <div className="col-span-2 rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3" data-testid="product-imei-section">
               <Label>IMEI {editId ? "(shto IMEI të reja)" : ""}</Label>
               <div className="flex gap-2 mt-1">
@@ -256,7 +257,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
             <Label>Çmim shitje me shumicë (€)</Label>
             <Input type="number" step="0.01" value={form.wholesale_price} onChange={(e) => set({ wholesale_price: e.target.value })} className={inp} data-testid="product-wholesale-input" />
           </div>
-          <div>
+          <div className={catalogOnly ? "hidden" : ""}>
             <Label>Sasia</Label>
             <Input type="number" value={form.quantity} onChange={(e) => set({ quantity: e.target.value })} className={inp} data-testid="product-quantity-input" />
             {form.type === "phone" && <div className="text-[11px] text-slate-500 mt-1">Për telefona shto IMEI më lart.</div>}
@@ -285,7 +286,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
               </div>
             </>
           )}
-          {!editId && (
+          {!editId && !catalogOnly && (
             <PurchaseSourceFields src={src} setSrc={setSrc} suppliers={suppliers} citizens={citizens}
               total={purchaseTotal} paid={paidValue} setPaid={setPaid} inp={inp} />
           )}
