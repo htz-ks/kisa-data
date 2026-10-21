@@ -155,7 +155,7 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Anulo</Button>
-          <Button onClick={submit} disabled={saving || refund <= 0}
+          <Button onClick={submit} disabled={saving || !Object.values(qty).some((q) => Number(q) > 0)}
             className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold" data-testid="return-submit-btn">
             {saving ? "Duke ruajtur…" : "Konfirmo Rikthimin"}
           </Button>

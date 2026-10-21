@@ -75,3 +75,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Kushtet e garancionit në A4: shkronja 14px (titujt 16px); mund të kalojnë në faqe të dytë.
 - Shitja vendore: butonat Blerja (/purchases?new=1), Kthimi i produktit (/returns?new=1 – gjej faturën me nr. ose IMEI), Shpenzimet (/expenses: CRUD, filtër sipas muajit, totali; nav Financa > Shpenzimet).
 - Blerje e re: butonat "Shto furnitor" (dialog i shpejtë, zgjidhet vetë) dhe "Krijo artikull" (ProductFormDialog catalogOnly → shtohet si rresht në blerje, pa dyfishim stoku).
+- Rikthimi: shuma llogaritet sipas pagesës pas zbritjes (çmimi × total/nëntotal), maksimumi = totali − të kthyerat më parë (refunded_amount); shuma mund të shkruhet manualisht (refund_amount), butoni Auto.

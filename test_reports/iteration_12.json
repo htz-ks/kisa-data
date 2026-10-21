@@ -1,0 +1,25 @@
+{
+  "summary": "Tested return refund honoring invoice discount + manual refund override. Backend 9/9 pytest pass (single-item 15-3 => refund 12; manual 10; cap above max; negative clamped to 0; manual 0 restores stock; multi-item 10+20 disc 6 => 16 then remaining 8 capped; over-refund then remaining cap; debt sale 12 => debt 7 + cash 5 and customer balance to 0; phone IMEI back in_stock with 180 refund). UI (Rikthimet page search by invoice): item line shows 'Çmimi €15,00 · paguar €12,00 (me zbritje)', auto/input/big amount = 12.00, confirm saves 12 and list row shows €12; manual 10 saves 10; Auto reset restores 12; typing 50 is capped to €12. ONE FAILURE: manual refund 0 -> Konfirmo button stays disabled, so 'return item without money' is impossible from UI.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReturnDialog", "issue": "With quantity selected and manual refund typed as 0, submit button is disabled (disabled={saving || refund <= 0}). Requirement: manual 0 allowed. Fix: disable only when no quantity selected, e.g. const hasQty = Object.values(qty).some(q => Number(q) > 0); disabled={saving || !hasQty}.", "selector": "[data-testid='return-submit-btn']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_return_discount_refund.py", "/app/backend/tests/seed_return_discount_ui.py", "/app/test_reports/pytest/pytest_results_iter12.xml"],
+  "action_items": ["ReturnDialog.jsx: enable return-submit-btn when any qty > 0 even if refund is 0 (backend already accepts refund_amount 0)."],
+  "critical_code_review_comments": [
+    "Frontend: if manual input is cleared (empty string) refund becomes 0 silently; consider treating empty as auto or showing hint.",
+    "Backend: line_refund = round(unit*factor,2)*qty not rounded after multiply; float artifacts possible for large qty (minor, final refund_total is rounded).",
+    "Returns page find() loads all /sales client-side to match invoice; fine for now, slow at scale."
+  ],
+  "updated_files": ["/app/backend/tests/test_return_discount_refund.py", "/app/backend/tests/seed_return_discount_ui.py"],
+  "success_rate": {"backend": "100%", "frontend": "86% (6/7 checks)"},
+  "seed_data_creation": "TEST_RD*/TEST_RDUI* products, sales, returns, customers created and cleaned up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest backend/tests/test_return_discount_refund.py. For UI use seed_return_discount_ui.py seed|clean (3 sales 15 disc 3). Faturat-page return button entry not re-tested this iteration (same ReturnDialog component).",
+  "test_credentials": "admin@prodata.al / admin123"
+}
