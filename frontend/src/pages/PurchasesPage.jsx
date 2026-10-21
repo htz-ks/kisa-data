@@ -36,10 +36,10 @@ export default function PurchasesPage() {
     setSupplierId(sup.id);
   };
   // new article goes straight into this purchase (first empty row, or a new row)
-  const onProductCreated = async (prod) => {
+  const onProductCreated = async (prod, imeis = []) => {
     const { data } = await api.get("/products");
     setProducts(data);
-    const row = { product_id: prod.id, quantity: 1, cost_price: prod.cost_price || 0, imeis: [], imeiInput: "" };
+    const row = { product_id: prod.id, quantity: imeis.length || 1, cost_price: prod.cost_price || 0, imeis, imeiInput: "" };
     setItems((p) => {
       const empty = p.findIndex((i) => !i.product_id);
       return empty >= 0 ? p.map((it, i) => (i === empty ? row : it)) : [...p, row];

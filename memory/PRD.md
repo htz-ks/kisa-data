@@ -76,3 +76,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Shitja vendore: butonat Blerja (/purchases?new=1), Kthimi i produktit (/returns?new=1 – gjej faturën me nr. ose IMEI), Shpenzimet (/expenses: CRUD, filtër sipas muajit, totali; nav Financa > Shpenzimet).
 - Blerje e re: butonat "Shto furnitor" (dialog i shpejtë, zgjidhet vetë) dhe "Krijo artikull" (ProductFormDialog catalogOnly → shtohet si rresht në blerje, pa dyfishim stoku).
 - Rikthimi: shuma llogaritet sipas pagesës pas zbritjes (çmimi × total/nëntotal), maksimumi = totali − të kthyerat më parë (refunded_amount); shuma mund të shkruhet manualisht (refund_amount), butoni Auto.
+- RREGULL: Fusha IMEI te forma e artikullit shfaqet GJITHMONË poshtë Barkodit gjatë krijimit (edhe nga Blerja/Shitja); mos e fshih më. Shtimi i IMEI e kthen llojin në Telefon; nga Blerja IMEI-t kalojnë te rreshti i blerjes.

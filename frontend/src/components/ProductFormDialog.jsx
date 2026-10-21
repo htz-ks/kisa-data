@@ -133,18 +133,21 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
     const taken = new Set([...form.imeis, ...(form._existing_imeis || [])]);
     const fresh = vals.filter((v) => !taken.has(v));
     if (fresh.length < vals.length) toast.error("Ky IMEI është shtuar tashmë");
-    setForm((f) => ({ ...f, imeis: [...f.imeis, ...fresh] }));
+    // an article with IMEI is a phone
+    setForm((f) => ({ ...f, imeis: [...f.imeis, ...fresh], type: !editId && fresh.length ? "phone" : f.type }));
     setImeiInput("");
   };
 
   const save = async () => {
     if (!form.name.trim()) { toast.error("Shkruaj emrin e artikullit"); return; }
     const pending = splitImeis(imeiInput).filter((v) => !form.imeis.includes(v));
-    const allImeis = form.type === "phone" ? [...form.imeis, ...pending] : [];
+    const allImeis = [...form.imeis, ...pending];
+    const type = !editId && allImeis.length ? "phone" : form.type;
     setSaving(true);
     try {
       const payload = {
         ...form,
+        type,
         imeis: allImeis,
         cost_price: Number(form.cost_price) || 0,
         sale_price: Number(form.sale_price) || 0,
@@ -169,7 +172,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
         toast.success(`Produkti u shtua (${data.code})`);
       }
       onOpenChange(false);
-      onSaved && (await onSaved(data));
+      onSaved && (await onSaved(data, allImeis));
     } catch (e) {
       toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Gabim");
     } finally {
@@ -222,7 +225,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
             </div>
             {!editId && <div className="text-[11px] text-slate-500 mt-1">Nëse e lë bosh, gjenerohet automatikisht.</div>}
           </div>
-          {form.type === "phone" && !catalogOnly && (
+          {(!editId || form.type === "phone") && (
             <div className="col-span-2 rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3" data-testid="product-imei-section">
               <Label>IMEI {editId ? "(shto IMEI të reja)" : ""}</Label>
               <div className="flex gap-2 mt-1">
