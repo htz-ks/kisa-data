@@ -66,3 +66,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Kartela e borxhit (PDF/PNG): vetëm tabela përmbledhëse + kolona Përshkrimi (produkti, GB/RAM/bateria, IMEI); WhatsApp dërgon vetëm foto (Web Share në telefon; në kompjuter shkarkon foton + hap bisedën). Endpoint /statement.png (PyMuPDF).
 - Kartela e blerësve (/customer-cards, nën Financa pas Pagesa/Borxhe): pasqyra e të gjithë klientëve (fatura, blerë, paguar, borxhi, statusi), filtra, WhatsApp foto + PDF A4; PDF shfaq "PAGUAR PLOTËSISHT" kur borxhi = 0.
 - Shitja vendore: butoni "Shto klient" + opsioni "+ Shto klient të ri" (dialog i shpejtë, zgjidhet automatikisht). "Klient i rastit" → "Qytetar" kudo.
+- Shitja vendore: hoqa Limiti/Gjendja; shtova Garancioni (butona 1–12 muaj + shkrim i lirë, vlen për të gjithë artikujt); Përshkrimi me kërkim (shkruaj emër/shifër/barkod) + "Krijo artikull: <tekst>".

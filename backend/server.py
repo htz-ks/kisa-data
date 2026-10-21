@@ -225,6 +225,7 @@ class SaleIn(BaseModel):
     notes: Optional[str] = ""
     document_date: Optional[str] = None
     due_date: Optional[str] = None
+    warranty_months: Optional[int] = None
 
 
 class PaymentIn(BaseModel):
@@ -709,7 +710,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
                 found = {"imei": imei, "status": "in_stock"}
                 imeis.append(found)
             it.imei = imei
-            months = int(prod.get("warranty_months", 12) or 0)
+            months = body.warranty_months if body.warranty_months is not None else int(prod.get("warranty_months", 12) or 0)
             warranty_until = (now + timedelta(days=months * 30)).isoformat() if months > 0 else None
             found.update({"status": "sold", "sold_at": now.isoformat(), "warranty_until": warranty_until})
             qty = 1
@@ -720,6 +721,9 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
                 raise HTTPException(400, f"Sasia e pamjaftueshme për {prod['name']}")
             qty = it.quantity
             warranty_info = {}
+            if body.warranty_months:
+                warranty_info = {"warranty_months": body.warranty_months,
+                                 "warranty_until": (now + timedelta(days=body.warranty_months * 30)).isoformat()}
 
         line_total = it.sale_price * qty
         subtotal += line_total
