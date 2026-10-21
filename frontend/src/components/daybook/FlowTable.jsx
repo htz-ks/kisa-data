@@ -18,10 +18,10 @@ const Row = ({ e, onEdit, onHistory, onDelete }) => (
       {e.corrected && <span className="ml-2 text-[11px] text-sky-600 font-semibold">korrigjuar</span>}
     </td>
     <td className="px-3 py-2 font-mono-pd whitespace-nowrap">{e.invoice_no || "—"}</td>
-    <td className="px-3 py-2 text-right font-mono-pd text-emerald-600">{e.hyrje ? eur(e.hyrje) : ""}</td>
-    <td className="px-3 py-2 text-right font-mono-pd text-rose-600">{e.dalje ? eur(e.dalje) : ""}</td>
+    <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap">{e.hyrje ? eur(e.hyrje) : ""}</td>
+    <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap">{e.dalje ? eur(e.dalje) : ""}</td>
     <td className="px-3 py-2">{e.method === "bank" ? "Bankë" : "Cash"}</td>
-    <td className={`px-3 py-2 text-right font-mono-pd font-semibold ${e.profit > 0 ? "text-emerald-600" : e.profit < 0 ? "text-rose-600" : "text-slate-400"}`}>
+    <td className={`px-3 py-2 text-right font-mono-pd font-semibold whitespace-nowrap ${e.profit > 0 ? "text-emerald-600" : e.profit < 0 ? "text-rose-600" : "text-slate-400"}`}>
       {e.cost_missing ? <span className="inline-flex items-center gap-1 text-amber-600" title="Mungon çmimi i blerjes"><AlertTriangle className="w-3.5 h-3.5" /> i paplotë</span> : e.profit ? eur(e.profit) : "—"}
     </td>
     <td className="px-2 py-2 whitespace-nowrap text-right">
@@ -70,10 +70,10 @@ export const FlowTable = ({ date, entries, summary, onChange }) => {
             <tfoot className="font-bold border-t-2 border-slate-700">
               <tr>
                 <td colSpan={4} className="px-3 py-2">Totali i ditës</td>
-                <td className="px-3 py-2 text-right font-mono-pd text-emerald-600" data-testid="flow-total-in">{eur(entries.reduce((s, e) => s + e.hyrje, 0))}</td>
-                <td className="px-3 py-2 text-right font-mono-pd text-rose-600" data-testid="flow-total-out">{eur(entries.reduce((s, e) => s + e.dalje, 0))}</td>
+                <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap" data-testid="flow-total-in">{eur(entries.reduce((s, e) => s + e.hyrje, 0))}</td>
+                <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap" data-testid="flow-total-out">{eur(entries.reduce((s, e) => s + e.dalje, 0))}</td>
                 <td />
-                <td className={`px-3 py-2 text-right font-mono-pd ${summary.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{eur(summary.net_profit)}</td>
+                <td className={`px-3 py-2 text-right font-mono-pd whitespace-nowrap ${summary.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{eur(summary.net_profit)}</td>
                 <td />
               </tr>
             </tfoot>

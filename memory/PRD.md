@@ -87,3 +87,5 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - 2026-06: Zekati te Stoku (admin): per vit, 2.5% e (vlera e blerjes se stokut + fitim simbolik %), shuma e ndryshueshme, pagesa pjese-pjese me mbetje, fshirje. Endpoints /api/zakat, /api/zakat/{id}/payments, DELETE /api/zakat/payments/{pid}
 
 - 2026-06: Shitja vendore quick buttons save draft (sessionStorage sale-draft) + floating "Kthehu te Shitja vendore" button (back-to-sale-btn) restores the sale
+
+- 2026-06: Qarkullimet Ditore (/daily-flow, backend/daybook.py): kalendar, tabela nga shitjet/blerjet/shpenzimet/pagesat/kthimet + hyrje/dalje manuale, korrigjime me historik (edhe nga Faturat/Blerjet/Shpenzimet), Arka Ditore me bartje, Numërimi i Parave 12 prerje, fitimi ditor, raporte ditë/muaj/vit me Excel+PDF. Admin only. Test data cleaned; user must set Arka fillestare.

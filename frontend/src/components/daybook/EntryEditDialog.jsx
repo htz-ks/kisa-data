@@ -26,8 +26,7 @@ export const EntryEditDialog = ({ entryKey, onClose, onSaved }) => {
 
   const save = async () => {
     const body = { key: entryKey, method: f.method, description: f.description, invoice_no: f.invoice_no, reason: f.reason };
-    if (e.hyrje || !e.dalje) body.hyrje = Number(f.hyrje) || 0;
-    if (e.dalje) body.dalje = Number(f.dalje) || 0;
+    if (isIn) body.hyrje = Number(f.hyrje) || 0; else body.dalje = Number(f.dalje) || 0;
     if (e.source === "sale" && f.cost !== "" && Number(f.cost) !== e.cost) body.cost = Number(f.cost);
     try { await api.put("/daybook/override", body); toast.success("Korrigjimi u ruajt"); onClose(); onSaved && onSaved(); } catch (err) { fail(err); }
   };
@@ -37,6 +36,7 @@ export const EntryEditDialog = ({ entryKey, onClose, onSaved }) => {
     toast.success("U kthyen vlerat origjinale"); onClose(); onSaved && onSaved();
   };
   const set = (p) => setF((x) => ({ ...x, ...p }));
+  const isIn = e && (e.source === "sale" || e.type === "Arkëtim borxhi");
 
   return (
     <Dialog open={!!entryKey} onOpenChange={(o) => !o && onClose()}>
@@ -52,8 +52,8 @@ export const EntryEditDialog = ({ entryKey, onClose, onSaved }) => {
                 <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bankë</SelectItem></SelectContent>
               </Select>
             </div>
-            {(e.hyrje > 0 || !e.dalje) && <div><Label>Hyrje (€)</Label><Input type="number" step="0.01" value={f.hyrje} onChange={(x) => set({ hyrje: x.target.value })} className={inp} data-testid="entry-edit-hyrje" /></div>}
-            {e.dalje > 0 && <div><Label>Dalje (€)</Label><Input type="number" step="0.01" value={f.dalje} onChange={(x) => set({ dalje: x.target.value })} className={inp} data-testid="entry-edit-dalje" /></div>}
+            {isIn && <div><Label>Hyrje (€)</Label><Input type="number" step="0.01" value={f.hyrje} onChange={(x) => set({ hyrje: x.target.value })} className={inp} data-testid="entry-edit-hyrje" /></div>}
+            {!isIn && <div><Label>Dalje (€)</Label><Input type="number" step="0.01" value={f.dalje} onChange={(x) => set({ dalje: x.target.value })} className={inp} data-testid="entry-edit-dalje" /></div>}
             {e.source === "sale" && (
               <div><Label>Kostoja e mallit (€)</Label><Input type="number" step="0.01" value={f.cost} placeholder={e.cost_missing ? "Mungon – plotësoje" : ""} onChange={(x) => set({ cost: x.target.value })} className={inp} data-testid="entry-edit-cost" /></div>
             )}

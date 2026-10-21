@@ -1,0 +1,47 @@
+{
+  "summary": "Tested the Qarkullimet Ditore (daybook) module end to end. Backend: 13 pytest tests in /app/backend/tests/test_daybook.py. All 13 pass when run serially with -n 0. Covered: access control (employee gets 403), invalid dates, the real-data day view for 2026-10-20 and 2026-10-21 (no duplicate keys, opening 1000 -> 1510 -> 181 carry-over, opening is null before the start date), report totals and day/month/year grouping, xlsx/pdf export, override and restore of a real sale (affects the next day's opening and is written to the audit log), manual entries (cash/bank, in_profit, edit, soft-delete with reason and audit), expense override (cash and bank), cash count 652.00 with difference, and future reports. Frontend: checked with Playwright at desktop and mobile sizes. Working: the 6 cards, the calendar (Feb 2028 has 29 days, Feb 2027 has 28), prev/next/today, the flow table with 15 rows on 21.10, the edit dialog for auto entries, the manual dialog for manual entries (create/edit/soft-delete via prompt), history dialogs, cash count total and difference text, save, Arka Ditore, the profit box, reports (day/month), the Excel download, the PDF button, the Sale page button and the floating back-to-sale button, and the correct-* buttons on /sales, /purchases and /expenses. The employee does not see the nav link and is redirected away from /daily-flow. The mobile layout has no horizontal page overflow. Found 1 UI-reachable logic bug in EntryEditDialog and 1 backend summarize bug.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "daybook.summarize()", "issue": "The cash_in/cash_out lambda uses `e['hyrje'] or e['dalje']`. When an entry has both hyrje>0 and dalje>0 (possible via PUT /override, e.g. hyrje=10 on a 40 EUR expense), cash_out counts hyrje instead of dalje. Reproduced: closing(2099-02-01)=181 but opening(2099-02-02)=151, so carry-over breaks. cash_net() is correct. Fix: cash_in = sum(hyrje), cash_out = sum(dalje) over cash entries."},
+      {"endpoint": "PUT /api/daybook/override", "issue": "It does not check that the source document exists. key 'sale:000000000000000000000000' returns 200 and stores an orphan override. Overrides are also left behind when an expense or payment is deleted. Reason is not required for a correction (the requirement asks for correction history with a reason)."},
+      {"endpoint": "POST /api/expenses default date", "issue": "Default date is now_utc().date(), so it is bucketed in UTC, while the other sources use Europe/Belgrade. Expenses created between 00:00 and 01:00/02:00 local time without an explicit date land on the previous day."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "EntryEditDialog", "issue": "For a Blerje fully on debt (paid 0 -> dalje=0), or any outflow entry whose dalje is 0, the dialog shows a 'Hyrje (EUR)' field instead of 'Dalje'. The condition `(e.hyrje > 0 || !e.dalje)` and the save logic `if (e.hyrje || !e.dalje) body.hyrje=...` mean that entering an amount turns a purchase into cash IN. Seen on /purchases for the BL-E217CF purchase (Depo Gega, 1450 EUR debt). The field should depend on source/type: purchase, expense, return and Pagese furnitori -> dalje; sale and Arketim borxhi -> hyrje.", "selector": "[data-testid='entry-edit-hyrje']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/daily-flow flow table", "issues": ["Hyrje/Dalje amounts such as 'EUR 1.000,00' and 'EUR 1.450,00', and the footer totals, wrap onto 2 lines. Add whitespace-nowrap to the amount cells."]},
+      {"screen": "/daily-flow reports", "issues": ["The floating 'Kthehu te Shitja vendore' button (back-to-sale-btn) covers the last report columns (Arka ne fund / Dif. numerimit) at the bottom right.", "Native <input type=date> is used for report-from/report-to, manual-date and the opening date instead of the shadcn calendar."]},
+      {"screen": "Arka Ditore", "issues": ["The bank line 'hyrje EUR 0.00 · dalje EUR 0.00' uses a dot decimal, unlike the 'EUR 0,00' format used elsewhere."]},
+      {"screen": "Historiku (all) dialog", "issues": ["The global history has no column showing which transaction or key each row belongs to, so rows cannot be told apart."]},
+      {"screen": "Dialogs", "issues": ["The dialogs use a dark bg #141C2B on a light-themed page. This is consistent with the rest of the app, but it contrasts with the light page."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_daybook.py", "/app/test_reports/pytest/pytest_daybook.xml"],
+  "action_items": [
+    "Fix EntryEditDialog: decide whether to show Hyrje or Dalje from the entry source/type, not from the current values (purchases on debt currently show Hyrje)",
+    "Fix summarize() cash_in/cash_out so it uses hyrje and dalje separately; this keeps closing == next-day opening when both are set",
+    "Validate in PUT /daybook/override that the source doc exists; consider requiring a reason; clean up overrides when an expense or payment is deleted",
+    "Add whitespace-nowrap to the amount columns; keep the floating back-to-sale button from covering the reports table",
+    "There is a cash count (652.00) saved on the REAL date 2026-10-21, made by the main agent before this run, at 6:57 PM. Remove it if it was test data. There is also a count on 2099-01-12, which is test-only."
+  ],
+  "critical_code_review_comments": [
+    "ledger() calls collect() from start_date to d_to on every /day request and loads all customers, suppliers and overrides each time. This will get slower over the years; consider caching or storing daily closings.",
+    "Zakat payments (db.zakat_payments) are not part of the daybook cash flow. Check whether they are paid from the cash drawer.",
+    "Payments are always method=cash and there is no way to mark bank transfers except per-entry correction.",
+    "Report totals over periods that start before start_date include cash_in/out of the pre-start days, so opening + in - out != cash_end. Correct by design, but it may confuse users.",
+    "pytest.ini runs with xdist: test_daybook.py must be run with -n 0 because the settings fixture is global state."
+  ],
+  "updated_files": ["/app/backend/tests/test_daybook.py"],
+  "success_rate": {"backend": "100% (13/13 serial; 2 summarize/override edge bugs found by manual probes)", "frontend": "~95% (1 dialog logic bug)"},
+  "test_credentials": "admin@prodata.al/admin123, punonjes@prodata.al/punonjes123",
+  "seed_data_creation": "None left behind. Settings restored to 2026-10-20 / 1000 (verified). Temporary 2099 manual entries were soft-deleted, and 2099 expenses and overrides were deleted. The UI test manual entry on 2028-02-29 was soft-deleted, and its count was deleted from Mongo. The count on 2099-01-12 is still there (no API to delete it). Audit log rows from the tests are still there.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && pytest tests/test_daybook.py -n 0. The year select only offers years up to now+2, so use 2028-02-29 for UI tests and 2099 for API-only tests. Real data: 2026-10-20 has 11 entries (open 1000 -> close 1510); 2026-10-21 has 15 entries (open 1510 -> close 181, net profit 52.50). Manual delete uses window.prompt, so a Playwright dialog handler is needed (import asyncio). Testids that contain a colon need attribute-quoted selectors.",
+  "rca of the issue": "EntryEditDialog guesses the direction from the values (hyrje>0 or dalje==0 -> hyrje). Debt purchases have both values at 0, so the guess falls back to hyrje. summarize() uses `hyrje or dalje` as a shortcut that assumes only one of them is non-zero."
+}

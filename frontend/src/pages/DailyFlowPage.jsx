@@ -28,7 +28,7 @@ export default function DailyFlowPage() {
   const s = data?.summary;
   const diff = data?.count?.difference;
   return (
-    <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-5" data-testid="daily-flow-page">
+    <div className="p-4 md:p-8 pb-28 max-w-[1600px] mx-auto space-y-5" data-testid="daily-flow-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Qarkullimet Ditore</h1>

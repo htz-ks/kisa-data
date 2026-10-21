@@ -10,6 +10,7 @@ import logging
 import secrets
 import hmac
 from dateutil.relativedelta import relativedelta
+from zoneinfo import ZoneInfo
 import fitz
 from PIL import Image, ImageOps
 import hashlib
@@ -1320,7 +1321,7 @@ async def create_expense(body: ExpenseIn, user: dict = Depends(require_admin)):
     doc = body.model_dump()
     doc["category"] = (doc["category"] or "Tjetër").strip()
     try:
-        doc["date"] = datetime.fromisoformat(doc["date"]).date().isoformat() if doc["date"] else now_utc().date().isoformat()
+        doc["date"] = datetime.fromisoformat(doc["date"]).date().isoformat() if doc["date"] else datetime.now(ZoneInfo("Europe/Belgrade")).date().isoformat()
     except ValueError:
         raise HTTPException(400, "Data nuk është e vlefshme")
     doc["description"] = (doc["description"] or "")[:300]

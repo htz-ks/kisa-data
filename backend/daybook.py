@@ -202,7 +202,6 @@ def make_router(db, require_admin, now_utc, company_header):
         return (e["hyrje"] - e["dalje"]) if e["method"] == "cash" else 0.0
 
     def summarize(entries: list) -> dict:
-        cash = lambda pred: r2(sum(x for e in entries if e["method"] == "cash" and pred(e) for x in [e["hyrje"] or e["dalje"]]))  # noqa: E731
         by = lambda src, field: r2(sum(e[field] for e in entries if e["source"] == src and e["method"] == "cash"))  # noqa: E731
         revenue = r2(sum(e["revenue"] for e in entries if e["source"] in ("sale", "return")))
         cost = r2(sum(e["cost"] for e in entries))
@@ -218,8 +217,8 @@ def make_router(db, require_admin, now_utc, company_header):
             "supplier_payments": r2(sum(e["dalje"] for e in entries if e["type"] == "Pagesë furnitori" and e["method"] == "cash")),
             "returns_out": by("return", "dalje"),
             "manual_out": by("manual", "dalje"),
-            "cash_in": cash(lambda e: e["hyrje"] > 0),
-            "cash_out": cash(lambda e: e["dalje"] > 0),
+            "cash_in": r2(sum(e["hyrje"] for e in entries if e["method"] == "cash")),
+            "cash_out": r2(sum(e["dalje"] for e in entries if e["method"] == "cash")),
             "bank_in": r2(sum(e["hyrje"] for e in entries if e["method"] == "bank")),
             "bank_out": r2(sum(e["dalje"] for e in entries if e["method"] == "bank")),
             "sales_total": r2(sum(e["revenue"] for e in entries if e["source"] == "sale")),
@@ -315,6 +314,10 @@ def make_router(db, require_admin, now_utc, company_header):
         src = body.key.split(":")[0]
         if src not in ("sale", "purchase", "expense", "payment", "return"):
             raise HTTPException(400, "Ky transaksion nuk mund të korrigjohet këtu")
+        coll = {"sale": db.sales, "purchase": db.purchases, "expense": db.expenses, "payment": db.payments, "return": db.returns}[src]
+        sid = body.key.partition(":")[2]
+        if not ObjectId.is_valid(sid) or not await coll.find_one({"_id": ObjectId(sid)}, {"_id": 1}):
+            raise HTTPException(404, "Transaksioni nuk u gjet")
         fields = {f: getattr(body, f) for f in OVERRIDABLE if getattr(body, f) is not None}
         for f in ("hyrje", "dalje", "cost"):
             if f in fields:
