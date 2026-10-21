@@ -29,6 +29,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.platypus import Image as RLImage
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
 )
@@ -816,6 +817,24 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
 
 
 # ---------- Invoice PDF ----------
+COMPANY = {
+    "name": "HIGH TECH ZONE SH.P.K.", "address": "Rr. Henri Dunan nr. 6", "nui": "811313620",
+    "phone": "044 104 605", "email": "htz.ks@hotmail.com",
+}
+LOGO_PATH = ROOT_DIR / "assets" / "htz-logo.png"
+
+
+def _company_header(subtitle: str) -> list:
+    st = ParagraphStyle("co", parent=getSampleStyleSheet()["Normal"], fontSize=9, leading=12, textColor=colors.HexColor("#334155"))
+    info = Paragraph(
+        f"<font size=11 color='#0B0F17'><b>{COMPANY['name']}</b></font><br/>{COMPANY['address']}<br/>"
+        f"NUI: {COMPANY['nui']} · Tel: {COMPANY['phone']}<br/>{COMPANY['email']}<br/><font color='#10B981'><b>{subtitle}</b></font>", st)
+    logo = RLImage(str(LOGO_PATH), width=48 * mm, height=48 * mm * 384 / 905)
+    t = Table([[logo, info]], colWidths=[55 * mm, 125 * mm], hAlign="LEFT")
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    return [t, Spacer(1, 8)]
+
+
 @api.get("/sales/{sid}/invoice.pdf")
 async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     sale = await db.sales.find_one({"_id": ObjectId(sid)})
@@ -830,10 +849,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#64748B"))
     body = styles["Normal"]
 
-    story = []
-    story.append(Paragraph("KISA-DATA", title_style))
-    story.append(Paragraph("Faturë Shitjeje / Sales Invoice", small))
-    story.append(Spacer(1, 8))
+    story = _company_header("Faturë Shitjeje / Sales Invoice")
 
     header_tbl = Table(
         [
@@ -930,7 +946,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
         story.append(pay_tbl)
 
     story.append(Spacer(1, 20))
-    story.append(Paragraph("Faleminderit për blerjen! — Kisa-Data POS", small))
+    story.append(Paragraph(f"Faleminderit për blerjen! — {COMPANY['name']}", small))
 
     doc.build(story)
     buf.seek(0)
@@ -1522,9 +1538,7 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str, descs: di
     small = ParagraphStyle("small", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#64748B"))
     body = styles["Normal"]
     story = [
-        Paragraph("KISA-DATA", title_style),
-        Paragraph(f"Kartela e borxhit të {who}", small),
-        Spacer(1, 8),
+        *_company_header(f"Kartela e borxhit të {who}"),
         Paragraph(f"<b>{label}:</b> {customer.get('name', '')}", body),
         Paragraph(f"<b>Telefoni:</b> {customer.get('phone') or '-'}", body),
         Paragraph(f"<b>Data:</b> {now_utc().strftime('%Y-%m-%d %H:%M')}", body),
@@ -1569,7 +1583,7 @@ def _statement_pdf(customer: dict, ledger: list, who: str, label: str, descs: di
         ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#047857") if settled else colors.HexColor("#B45309")),
     ]))
     story += [tot]
-    story += [Spacer(1, 20), Paragraph("Kisa-Data — Faleminderit!", small)]
+    story += [Spacer(1, 20), Paragraph(f"{COMPANY['name']} — Faleminderit!", small)]
     doc.build(story)
     return buf.getvalue()
 

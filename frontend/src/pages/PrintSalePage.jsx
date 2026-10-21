@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api, { eur } from "@/lib/api";
+import { COMPANY } from "@/lib/company";
 
 /**
  * Print-only page. Query ?format=a4 | 80 | 58
@@ -58,8 +59,11 @@ export default function PrintSalePage() {
           <button onClick={() => window.close()} style={{ padding: "6px 10px" }}>Mbyll</button>
           <span style={{ fontSize: 11 }}>Format: {format}mm</span>
         </div>
-        <div className="center b" style={{ fontSize: 14 }}>KISA-DATA</div>
-        <div className="center" style={{ fontSize: 10 }}>Faturë Shitjeje</div>
+        <div className="center"><img src={COMPANY.logo} alt="logo" style={{ width: "70%", maxWidth: 220 }} /></div>
+        <div className="center b" style={{ fontSize: 12, marginTop: 4 }}>{COMPANY.name}</div>
+        <div className="center" style={{ fontSize: 9 }}>{COMPANY.address} · NUI {COMPANY.nui}</div>
+        <div className="center" style={{ fontSize: 9 }}>Tel {COMPANY.phone} · {COMPANY.email}</div>
+        <div className="center" style={{ fontSize: 10, marginTop: 4 }}>Faturë Shitjeje</div>
         <div className="hr" />
         <div className="row"><span>Nr.</span><span className="b">{sale.invoice_no}</span></div>
         <div className="row"><span>Data</span><span>{dateStr}</span></div>
@@ -94,7 +98,7 @@ export default function PrintSalePage() {
         {sale.due_amount > 0 && <div className="row b"><span>Borxh</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         <div className="hr" />
         <div className="center" style={{ fontSize: 10 }}>Faleminderit për blerjen!</div>
-        <div className="center" style={{ fontSize: 9, marginTop: 8 }}>Kisa-Data POS · {new Date().toLocaleDateString()}</div>
+        <div className="center" style={{ fontSize: 9, marginTop: 8 }}>{COMPANY.name} · {new Date().toLocaleDateString()}</div>
       </div>
     );
   }
@@ -109,6 +113,8 @@ export default function PrintSalePage() {
         .wrap { max-width: 190mm; margin: 0 auto; padding: 0; }
         .brand { color:#10B981; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
         .muted { color:#64748B; font-size: 14px; }
+        .company { font-size: 12px; color: #334155; line-height: 1.35; }
+        .company .cname { font-weight: 800; font-size: 14px; color: #0B0F17; margin-top: 4px; }
         .box { border:1px solid #E2E8F0; border-radius:8px; padding:10px 14px; font-size: 15px; }
         table { width:100%; border-collapse: collapse; margin-top: 16px; font-size: 15px; }
         th { background:#0B0F17; color:#fff; padding:9px 8px; text-align:left; font-size: 14px; white-space: nowrap; }
@@ -129,9 +135,11 @@ export default function PrintSalePage() {
       </div>
       <div className="wrap">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 10 }}>
-          <div>
-            <div className="brand">KISA-DATA</div>
-            <div className="muted">Faturë Shitjeje / Sales Invoice</div>
+          <div className="company">
+            <img src={COMPANY.logo} alt="HITECHZONE" style={{ height: 50 }} />
+            <div className="cname">{COMPANY.name}</div>
+            <div>{COMPANY.address} · NUI: {COMPANY.nui}</div>
+            <div>Tel: {COMPANY.phone} · {COMPANY.email}</div>
           </div>
           <div className="box" style={{ flex: 1, margin: "0 12px" }}>
             <div style={{ fontSize: 13, color: "#64748B" }}>Klienti</div>
@@ -192,7 +200,7 @@ export default function PrintSalePage() {
         )}
         {!sale.warranty_terms && (
           <div style={{ marginTop: 40, fontSize: 12, color: "#64748B", textAlign: "center" }}>
-            Faleminderit për blerjen! — Kisa-Data POS
+            Faleminderit për blerjen! — {COMPANY.name}
           </div>
         )}
       </div>
