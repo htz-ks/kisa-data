@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import api, { API } from "@/lib/api";
+import api from "@/lib/api";
 import { toast } from "sonner";
 import { FileText, MessageCircle, Loader2 } from "lucide-react";
 
@@ -28,6 +28,20 @@ export const shareImage = async (path, customer, phone) => {
   window.open(`https://wa.me/${phone}`, "_blank", "noopener");
 };
 
+// fetch with auth (token header) and open the PDF in a new tab
+export const openPdf = async (path) => {
+  const win = window.open("", "_blank");
+  try {
+    const { data } = await api.get(path, { responseType: "blob" });
+    const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+    if (win) win.location.href = url; else window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch {
+    if (win) win.close();
+    toast.error("PDF nuk u hap, provo përsëri");
+  }
+};
+
 export const DebtActions = ({ customer, pdfPath, compact = false }) => {
   const phone = waPhone(customer.phone);
   const [busy, setBusy] = useState(false);
@@ -42,7 +56,7 @@ export const DebtActions = ({ customer, pdfPath, compact = false }) => {
       <Button size="sm" onClick={send} disabled={busy} className="bg-[#25D366] hover:bg-[#1ebe5a] text-white font-semibold" data-testid={`card-whatsapp-${customer.id}`}>
         {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-1" />} WhatsApp
       </Button>
-      <Button size="sm" onClick={() => window.open(`${API}${pdfPath}`, "_blank")} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid={`card-pdf-${customer.id}`}>
+      <Button size="sm" onClick={() => openPdf(pdfPath)} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid={`card-pdf-${customer.id}`}>
         <FileText className="w-4 h-4 mr-1" /> PDF A4
       </Button>
     </div>
@@ -53,7 +67,7 @@ export const DebtActions = ({ customer, pdfPath, compact = false }) => {
         <Button onClick={send} disabled={busy} className="h-16 text-lg font-bold bg-[#25D366] hover:bg-[#1ebe5a] text-white" data-testid="debt-whatsapp-btn">
           {busy ? <Loader2 className="w-6 h-6 mr-2 animate-spin" /> : <MessageCircle className="w-6 h-6 mr-2" />} WhatsApp
         </Button>
-        <Button onClick={() => window.open(`${API}${pdfPath}`, "_blank")} className="h-16 text-lg font-bold bg-sky-600 hover:bg-sky-500 text-white" data-testid="debt-pdf-btn">
+        <Button onClick={() => openPdf(pdfPath)} className="h-16 text-lg font-bold bg-sky-600 hover:bg-sky-500 text-white" data-testid="debt-pdf-btn">
           <FileText className="w-6 h-6 mr-2" /> PDF A4
         </Button>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import api, { eur, API } from "@/lib/api";
+import api, { eur } from "@/lib/api";
+import { openPdf } from "@/components/DebtLedger";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +73,7 @@ export default function SalesPage() {
                 <td className="px-4 py-3 text-right font-mono-pd text-amber-400">{eur(s.due_amount)}</td>
                 <td className="px-4 py-3 text-right">
                   <Button variant="ghost" size="sm" onClick={() => setView(s)} data-testid={`sale-view-${s.id}`}><Eye className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => window.open(`${API}/sales/${s.id}/invoice.pdf`, "_blank")} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => openPdf(`/sales/${s.id}/invoice.pdf`)} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
                   <PrintMenu saleId={s.id} size="icon" testid={`sale-print-${s.id}`} />
                   <Button variant="ghost" size="sm" onClick={() => window.open(waLinkFor(s, customers), "_blank")} className="text-green-400" data-testid={`sale-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></Button>
                   {isAdmin && s.status !== "returned" && (
@@ -126,7 +127,7 @@ export default function SalesPage() {
                   <div><span className="text-slate-500">Borxh:</span> <span className="font-mono-pd text-amber-400 ml-3">{eur(view.due_amount)}</span></div>
                 </div>
               </div>
-              <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" onClick={() => window.open(`${API}/sales/${view.id}/invoice.pdf`, "_blank")}><Download className="w-4 h-4 mr-2" /> Shkarko PDF</Button>
+              <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" onClick={() => openPdf(`/sales/${view.id}/invoice.pdf`)}><Download className="w-4 h-4 mr-2" /> Shkarko PDF</Button>
               <Button variant="outline" className="w-full border-green-500/40 text-green-400 hover:bg-green-500/10"
                 onClick={() => window.open(waLinkFor(view, customers), "_blank")} data-testid={`sale-whatsapp-view-${view.id}`}>
                 <MessageCircle className="w-4 h-4 mr-2" /> Dërgo në WhatsApp
