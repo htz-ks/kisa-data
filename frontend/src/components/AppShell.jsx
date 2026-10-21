@@ -1,10 +1,10 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
   FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, IdCard, Banknote, Undo2,
-  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse
+  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -167,9 +167,30 @@ export default function AppShell() {
       </div>
 
       <main className="pane-light flex-1 min-w-0 pb-20 md:pb-0">
+        <BackToSale />
         <Outlet />
       </main>
       <Toaster richColors position="bottom-right" />
     </div>
   );
 }
+
+const DRAFT_KEY = "sale-draft";
+
+const BackToSale = () => {
+  const nav = useNavigate();
+  const { pathname } = useLocation();
+  const [has, setHas] = useState(!!sessionStorage.getItem(DRAFT_KEY));
+  useEffect(() => {
+    const on = () => setHas(!!sessionStorage.getItem(DRAFT_KEY));
+    window.addEventListener("sale-draft", on);
+    return () => window.removeEventListener("sale-draft", on);
+  }, []);
+  if (!has || pathname === "/sale/new") return null;
+  return (
+    <button onClick={() => nav("/sale/new")} data-testid="back-to-sale-btn"
+      className="fixed bottom-20 md:bottom-6 right-6 z-[60] pointer-events-auto flex items-center gap-2 px-5 py-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold shadow-xl transition-colors">
+      <ArrowLeft className="w-5 h-5" /> Kthehu te Shitja vendore
+    </button>
+  );
+};

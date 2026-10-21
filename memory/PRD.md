@@ -85,3 +85,5 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - 2026-06: Kartela e furnitorëve (/supplier-cards, GET /api/supplier-cards) with Paguaj dialog, PDF/WhatsApp; buttons Kartela e blerësve/furnitorëve on Shitja vendore (admin)
 
 - 2026-06: Zekati te Stoku (admin): per vit, 2.5% e (vlera e blerjes se stokut + fitim simbolik %), shuma e ndryshueshme, pagesa pjese-pjese me mbetje, fshirje. Endpoints /api/zakat, /api/zakat/{id}/payments, DELETE /api/zakat/payments/{pid}
+
+- 2026-06: Shitja vendore quick buttons save draft (sessionStorage sale-draft) + floating "Kthehu te Shitja vendore" button (back-to-sale-btn) restores the sale

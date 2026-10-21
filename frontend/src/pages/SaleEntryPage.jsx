@@ -17,6 +17,7 @@ import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
+export const DRAFT_KEY = "sale-draft";
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
 function emptyRow() {
@@ -55,6 +56,22 @@ export default function SaleEntryPage() {
     setProducts(p.data);
   };
   useEffect(() => { load(); }, []);
+
+  // keep the unsaved sale while visiting other pages; restored when coming back
+  useEffect(() => {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(DRAFT_KEY);
+    window.dispatchEvent(new Event("sale-draft"));
+    const d = JSON.parse(raw);
+    setCustomerId(d.customerId); setDocDate(d.docDate); setDueDate(d.dueDate); setPaymentMethod(d.paymentMethod);
+    setPriceMode(d.priceMode); setPaid(d.paid); setRows(d.rows); setNotes(d.notes); setWarranty(d.warranty);
+  }, []);
+  const goTo = (path) => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ customerId, docDate, dueDate, paymentMethod, priceMode, paid, rows, notes, warranty }));
+    window.dispatchEvent(new Event("sale-draft"));
+    navigate(path);
+  };
 
 
   const addRow = () => setRows((r) => [...r, emptyRow()]);
@@ -196,28 +213,28 @@ export default function SaleEntryPage() {
             {isAdmin && (
               <>
                 <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
-                <Button size="sm" variant="outline" onClick={() => navigate("/products")} className="border-sky-400 text-sky-700 hover:bg-sky-50" data-testid="sale-goto-products-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/products")} className="border-sky-400 text-sky-700 hover:bg-sky-50" data-testid="sale-goto-products-btn">
                   <List className="w-4 h-4 mr-1" /> Artikujt
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/stock")} className="border-emerald-400 text-emerald-700 hover:bg-emerald-50" data-testid="sale-goto-stock-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/stock")} className="border-emerald-400 text-emerald-700 hover:bg-emerald-50" data-testid="sale-goto-stock-btn">
                   <Warehouse className="w-4 h-4 mr-1" /> Stoku
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/payments")} className="border-orange-400 text-orange-700 hover:bg-orange-50" data-testid="sale-goto-debts-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/payments")} className="border-orange-400 text-orange-700 hover:bg-orange-50" data-testid="sale-goto-debts-btn">
                   <CreditCard className="w-4 h-4 mr-1" /> Borxhet
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/customer-cards")} className="border-teal-400 text-teal-700 hover:bg-teal-50" data-testid="sale-goto-customer-cards-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/customer-cards")} className="border-teal-400 text-teal-700 hover:bg-teal-50" data-testid="sale-goto-customer-cards-btn">
                   <IdCard className="w-4 h-4 mr-1" /> Kartela e blerësve
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/supplier-cards")} className="border-indigo-400 text-indigo-700 hover:bg-indigo-50" data-testid="sale-goto-supplier-cards-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/supplier-cards")} className="border-indigo-400 text-indigo-700 hover:bg-indigo-50" data-testid="sale-goto-supplier-cards-btn">
                   <IdCard className="w-4 h-4 mr-1" /> Kartela e furnitorëve
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
                   <ShoppingBag className="w-4 h-4 mr-1" /> Blerja
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/returns?new=1")} className="border-amber-400 text-amber-700 hover:bg-amber-50" data-testid="sale-goto-return-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/returns?new=1")} className="border-amber-400 text-amber-700 hover:bg-amber-50" data-testid="sale-goto-return-btn">
                   <Undo2 className="w-4 h-4 mr-1" /> Kthimi i produktit
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate("/expenses?new=1")} className="border-rose-400 text-rose-700 hover:bg-rose-50" data-testid="sale-goto-expense-btn">
+                <Button size="sm" variant="outline" onClick={() => goTo("/expenses?new=1")} className="border-rose-400 text-rose-700 hover:bg-rose-50" data-testid="sale-goto-expense-btn">
                   <Banknote className="w-4 h-4 mr-1" /> Shpenzimet
                 </Button>
               </>
