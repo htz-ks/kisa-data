@@ -76,7 +76,7 @@ export default function PrintSalePage() {
                   {it.product_name}
                   {(it.product_code || it.barcode) && <div style={{ fontSize: 9 }}>{[it.product_code, it.barcode].filter(Boolean).join(" · ")}</div>}
                   {it.imei && <div style={{ fontSize: 9 }}>IMEI: {it.imei}</div>}
-                  {it.warranty_until && <div style={{ fontSize: 9 }}>Gar.: {(it.warranty_until || "").slice(0,10)}</div>}
+                  {it.warranty_until && <div style={{ fontSize: 9 }}>Gar.{it.warranty_label ? ` ${it.warranty_label}` : ""}: {(it.warranty_until || "").slice(0,10)}</div>}
                 </td>
                 <td className="r">{it.quantity}</td>
                 <td className="r">{Number(it.sale_price).toFixed(2)}</td>
@@ -155,7 +155,7 @@ export default function PrintSalePage() {
                 <td>{it.product_name}</td>
                 <td style={{ fontFamily: "monospace", fontSize: 11 }}>
                   {it.imei || "—"}
-                  {it.warranty_until && <div style={{ color: "#059669" }}>Garanci: {(it.warranty_until || "").slice(0,10)}</div>}
+                  {it.warranty_until && <div style={{ color: "#059669" }}>Garanci{it.warranty_label ? ` ${it.warranty_label}` : ""} deri: {(it.warranty_until || "").slice(0,10)}</div>}
                 </td>
                 <td className="r">{it.quantity}</td>
                 <td className="r">{Number(it.sale_price).toFixed(2)}</td>

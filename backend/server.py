@@ -226,6 +226,7 @@ class SaleIn(BaseModel):
     document_date: Optional[str] = None
     due_date: Optional[str] = None
     warranty_months: Optional[int] = None
+    warranty_days: Optional[int] = None
 
 
 class PaymentIn(BaseModel):
@@ -681,6 +682,12 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
     phone_new: dict = {}
     seen_imeis: set = set()
     now = now_utc()
+    # sale-level warranty overrides the product warranty (days take priority over months)
+    sale_w_days, sale_w_label = None, ""
+    if body.warranty_days is not None:
+        sale_w_days, sale_w_label = max(0, body.warranty_days), f"{body.warranty_days} ditë"
+    elif body.warranty_months is not None:
+        sale_w_days, sale_w_label = max(0, body.warranty_months) * 30, f"{body.warranty_months} muaj"
     # phase 1: validate everything in memory, nothing is written yet
     for it in body.items:
         if it.product_id not in cache:
@@ -710,20 +717,24 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
                 found = {"imei": imei, "status": "in_stock"}
                 imeis.append(found)
             it.imei = imei
-            months = body.warranty_months if body.warranty_months is not None else int(prod.get("warranty_months", 12) or 0)
-            warranty_until = (now + timedelta(days=months * 30)).isoformat() if months > 0 else None
+            if sale_w_days is not None:
+                months, days, w_label = body.warranty_months or 0, sale_w_days, sale_w_label
+            else:
+                months = int(prod.get("warranty_months", 12) or 0)
+                days, w_label = months * 30, f"{months} muaj"
+            warranty_until = (now + timedelta(days=days)).isoformat() if days > 0 else None
             found.update({"status": "sold", "sold_at": now.isoformat(), "warranty_until": warranty_until})
             qty = 1
-            warranty_info = {"warranty_months": months, "warranty_until": warranty_until}
+            warranty_info = {"warranty_months": months, "warranty_until": warranty_until, "warranty_label": w_label if days > 0 else ""}
         else:
             accessory_need[it.product_id] = accessory_need.get(it.product_id, 0) + it.quantity
             if prod.get("quantity", 0) < accessory_need[it.product_id]:
                 raise HTTPException(400, f"Sasia e pamjaftueshme për {prod['name']}")
             qty = it.quantity
             warranty_info = {}
-            if body.warranty_months:
-                warranty_info = {"warranty_months": body.warranty_months,
-                                 "warranty_until": (now + timedelta(days=body.warranty_months * 30)).isoformat()}
+            if sale_w_days:
+                warranty_info = {"warranty_months": body.warranty_months or 0, "warranty_label": sale_w_label,
+                                 "warranty_until": (now + timedelta(days=sale_w_days)).isoformat()}
 
         line_total = it.sale_price * qty
         subtotal += line_total

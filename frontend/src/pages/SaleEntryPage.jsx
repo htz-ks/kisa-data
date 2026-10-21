@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
 import { ProductCombobox } from "@/components/ProductCombobox";
+import { WarrantyPicker } from "@/components/WarrantyPicker";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
@@ -41,7 +42,7 @@ export default function SaleEntryPage() {
   const [scanRow, setScanRow] = useState(null);
   const [newCustomer, setNewCustomer] = useState(false);
   const [newName, setNewName] = useState("");
-  const [warranty, setWarranty] = useState("");
+  const [warranty, setWarranty] = useState(null);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -153,7 +154,8 @@ export default function SaleEntryPage() {
         document_date: docDate,
         due_date: dueDate,
         notes,
-        warranty_months: warranty === "" ? null : Number(warranty),
+        warranty_months: warranty?.unit === "muaj" ? warranty.n : null,
+        warranty_days: warranty?.unit === "ditë" ? warranty.n : null,
       };
       const { data } = await api.post("/sales", payload);
       toast.success(`Fatura ${data.invoice_no} u ruajt`);
@@ -247,19 +249,9 @@ export default function SaleEntryPage() {
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
                 className={field + " mt-1"} data-testid="sale-duedate-input" />
             </div>
-            <div className="md:col-span-6">
-              <Label className={label}>Garancioni (muaj)</Label>
-              <div className="mt-1 flex flex-wrap items-center gap-1" data-testid="sale-warranty-picker">
-                {Array.from({ length: 12 }, (_, k) => String(k + 1)).map((m) => (
-                  <button key={m} type="button" onClick={() => setWarranty(warranty === m ? "" : m)} data-testid={`sale-warranty-${m}`}
-                    className={`h-9 w-9 rounded border text-sm font-semibold transition-colors ${warranty === m ? "bg-emerald-500 border-emerald-500 text-white" : "bg-slate-50 border-slate-300 text-slate-700 hover:border-emerald-500"}`}>
-                    {m}
-                  </button>
-                ))}
-                <Input type="number" min="0" value={warranty} onChange={(e) => setWarranty(e.target.value)} placeholder="muaj"
-                  className={field + " w-20"} data-testid="sale-warranty-input" />
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1">{warranty ? `Garanci ${warranty} muaj për të gjithë artikujt e kësaj fature` : "Bosh = garancia e artikullit"}</div>
+            <div className="md:col-span-3">
+              <Label className={label}>Garancioni</Label>
+              <div className="mt-1"><WarrantyPicker value={warranty} onChange={setWarranty} /></div>
             </div>
             {paymentMethod === "debt" && (
               <div className="md:col-span-3">
