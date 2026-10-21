@@ -1,0 +1,18 @@
+{
+  "summary": "Tested the Garancioni WarrantyPicker on /sale/new and the sale-level warranty override in create_sale. Backend: 21/21 pytest tests pass (8 new warranty tests + 13 sale IMEI regression tests). Results: 10 ditë gives label '10 ditë' and until = now+10d. 6 muaj gives now+180d and warranty_months=6. 18 muaj gives 540d. Days take priority over months. 'Sipas artikullit' on a phone uses the product's 12 muaj; on an accessory it gives no warranty. Negative days give no warranty. UI: the menu opens with default + 1..12 muaj and the input gets autofocus. Picking 6 closes the menu and shows '6 muaj'. Typing 10 + Enter (ditë is the default unit) shows '10 ditë'. muaj + 18 + OK shows '18 muaj'. Entering 0 is ignored and the menu stays open. Four sales were saved through the UI (10 ditë acc, 6 muaj acc, default phone with IMEI autofilled, default acc) and the API payloads were correct. The print page shows 'Garanci 10 ditë deri: 2026-10-31' and 'Garanci 12 muaj deri: 2027-10-16'. Limiti and Gjendja are gone. Header fields do not overlap at 1920 or 390, and there is no horizontal page scroll at 390. Regression checks passed: product combobox (type + Enter), IMEI autofill, and the Shto klient quick dialog (creates the customer and selects it). All TEST_ data was cleaned up.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "POST /api/sales", "issue": "A 'muaj' warranty is stored as n*30 days (6 muaj = 180d, 12 muaj = 360d), not calendar months. This matches the existing product behavior, but the date is about 5 days short of a real year."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [
+    {"screen": "WarrantyPicker menu", "issues": ["The number input is w-20 with native spinners, so the placeholder 'Shkruaj' is cut off to 'Shkru'. Widen it slightly or hide the spinners.", "The chosen unit (ditë/muaj) stays selected after the menu closes. This is minor and may be the intended behavior."]}
+  ]},
+  "test_report_links": ["/app/backend/tests/test_sale_warranty.py", "/app/backend/tests/seed_warranty_ui.py", "/app/test_reports/pytest/pytest_iter9.xml"],
+  "action_items": ["Optional: widen sale-warranty-input so the placeholder is not truncated", "Optional: use calendar months (relativedelta) for muaj warranties instead of n*30 days"],
+  "critical_code_review_comments": ["For a phone with a ditë override, warranty_months is stored as 0. The label is correct, but any code that relies on warranty_months alone would show 0.", "server.py is about 1600 lines; consider splitting it into routers"],
+  "updated_files": ["/app/backend/tests/test_sale_warranty.py", "/app/backend/tests/seed_warranty_ui.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "TEST_UIW_acc / TEST_UIW_phone (IMEIs TESTUIW0001-2), TEST_UIW_cust and 4 sales were created and then deleted with 'python seed_warranty_ui.py clean'. The pytest fixtures clean up their own data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use seed_warranty_ui.py seed|clean for sale UI tests. Product combobox: click sale-product-0, fill sale-product-0-search, press Enter. Warranty testids: sale-warranty-trigger/menu/input/apply/unit-dite/unit-muaj/default/1..12."
+}

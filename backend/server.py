@@ -9,6 +9,7 @@ import io
 import logging
 import secrets
 import hmac
+from dateutil.relativedelta import relativedelta
 import fitz
 from PIL import Image, ImageOps
 import hashlib
@@ -687,7 +688,8 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
     if body.warranty_days is not None:
         sale_w_days, sale_w_label = max(0, body.warranty_days), f"{body.warranty_days} ditë"
     elif body.warranty_months is not None:
-        sale_w_days, sale_w_label = max(0, body.warranty_months) * 30, f"{body.warranty_months} muaj"
+        sale_w_days = ((now + relativedelta(months=max(0, body.warranty_months))) - now).days
+        sale_w_label = f"{body.warranty_months} muaj"
     # phase 1: validate everything in memory, nothing is written yet
     for it in body.items:
         if it.product_id not in cache:
@@ -721,7 +723,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
                 months, days, w_label = body.warranty_months or 0, sale_w_days, sale_w_label
             else:
                 months = int(prod.get("warranty_months", 12) or 0)
-                days, w_label = months * 30, f"{months} muaj"
+                days, w_label = ((now + relativedelta(months=months)) - now).days, f"{months} muaj"
             warranty_until = (now + timedelta(days=days)).isoformat() if days > 0 else None
             found.update({"status": "sold", "sold_at": now.isoformat(), "warranty_until": warranty_until})
             qty = 1

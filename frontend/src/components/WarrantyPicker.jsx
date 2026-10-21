@@ -24,11 +24,11 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
           <ChevronDown className="w-4 h-4 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-2 bg-white text-slate-900 border-slate-200" data-testid="sale-warranty-menu">
+      <PopoverContent align="start" className="w-72 p-2 bg-white text-slate-900 border-slate-200" data-testid="sale-warranty-menu">
         <div className="flex gap-1 mb-2">
-          <Input type="number" min="1" value={n} onChange={(e) => setN(e.target.value)} placeholder="Shkruaj"
+          <Input type="number" min="1" value={n} onChange={(e) => setN(e.target.value)} placeholder="nr."
             onKeyDown={(e) => e.key === "Enter" && applyTyped()} autoFocus
-            className="h-8 w-20 bg-white border-slate-300 text-slate-900" data-testid="sale-warranty-input" />
+            className="h-8 w-16 bg-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none border-slate-300 text-slate-900" data-testid="sale-warranty-input" />
           {["ditë", "muaj"].map((u) => (
             <button key={u} type="button" onClick={() => setUnit(u)} data-testid={`sale-warranty-unit-${u === "ditë" ? "dite" : "muaj"}`}
               className={`h-8 px-2 rounded text-xs font-semibold border ${unit === u ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-600"}`}>
