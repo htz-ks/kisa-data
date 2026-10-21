@@ -15,6 +15,7 @@ import { Plus, Trash2, Truck, PackagePlus } from "lucide-react";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 import { ProductFormDialog } from "@/components/ProductFormDialog";
 import { toast } from "sonner";
+import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState([]);
@@ -105,6 +106,7 @@ export default function PurchasesPage() {
               <th className="px-4 py-3 text-right">Totali</th>
               <th className="px-4 py-3 text-right">Paguar</th>
               <th className="px-4 py-3 text-right">Borxh</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -118,10 +120,11 @@ export default function PurchasesPage() {
                   <td className="px-4 py-3 text-right font-mono-pd">{eur(p.total)}</td>
                   <td className="px-4 py-3 text-right font-mono-pd text-emerald-400">{eur(p.paid_amount)}</td>
                   <td className="px-4 py-3 text-right font-mono-pd text-amber-400">{eur(p.due_amount)}</td>
+                  <td className="px-2 py-2 text-right"><CorrectButton entryKey={`purchase:${p.id}`} /></td>
                 </tr>
               );
             })}
-            {purchases.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">Pa blerje.</td></tr>}
+            {purchases.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">Pa blerje.</td></tr>}
           </tbody>
         </table>
       </div>

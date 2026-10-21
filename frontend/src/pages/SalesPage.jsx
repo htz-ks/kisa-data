@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import PrintMenu from "@/components/PrintMenu";
 import ReturnDialog from "@/components/ReturnDialog";
+import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 import { useAuth } from "@/context/AuthContext";
 
 function waLinkFor(sale, customers) {
@@ -76,6 +77,7 @@ export default function SalesPage() {
                   <Button variant="ghost" size="sm" onClick={() => openPdf(`/sales/${s.id}/invoice.pdf`)} className="text-emerald-400" data-testid={`sale-pdf-${s.id}`}><Download className="w-4 h-4" /></Button>
                   <PrintMenu saleId={s.id} size="icon" testid={`sale-print-${s.id}`} />
                   <Button variant="ghost" size="sm" onClick={() => window.open(waLinkFor(s, customers), "_blank")} className="text-green-400" data-testid={`sale-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></Button>
+                  {isAdmin && <CorrectButton entryKey={`sale:${s.id}`} />}
                   {isAdmin && s.status !== "returned" && (
                     <Button variant="ghost" size="sm" onClick={() => setReturnFor(s.id)} className="text-amber-400" data-testid={`sale-return-${s.id}`}>
                       <Undo2 className="w-4 h-4" />

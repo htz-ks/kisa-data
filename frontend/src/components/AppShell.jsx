@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
   FileText, BarChart3, Receipt, UserCog, LogOut, Smartphone, Tags, CreditCard, IdCard, Banknote, Undo2,
-  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse, ArrowLeft
+  ChevronDown, PlusSquare, List, Boxes, Handshake, FolderClosed, Wallet, Warehouse, ArrowLeft, CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -17,6 +17,7 @@ import { Toaster } from "@/components/ui/sonner";
 const NAV = [
   { key: "panel", to: "/dashboard", icon: LayoutDashboard, label: "Paneli", roles: ["admin", "employee"], tid: "nav-dashboard" },
   { key: "sale-new", to: "/sale/new", icon: Receipt, label: "Shitje e re", roles: ["admin", "employee"], tid: "nav-sale-new" },
+  { key: "daily-flow", to: "/daily-flow", icon: CalendarDays, label: "Qarkullimet Ditore", roles: ["admin"], tid: "nav-daily-flow" },
   { key: "pos", to: "/pos", icon: ShoppingCart, label: "POS i shpejtë", roles: ["admin", "employee"], tid: "nav-pos" },
   {
     key: "articles", icon: Boxes, label: "Artikuj", roles: ["admin", "employee"],

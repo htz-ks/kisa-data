@@ -1792,6 +1792,8 @@ async def shutdown():
     client.close()
 
 
+from daybook import make_router as make_daybook_router  # noqa: E402
+api.include_router(make_daybook_router(db, require_admin, now_utc, _company_header))
 app.include_router(api)
 app.add_middleware(
     CORSMiddleware,

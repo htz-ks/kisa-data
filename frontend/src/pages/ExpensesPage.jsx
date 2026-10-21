@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Banknote, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 
 const CATEGORIES = ["Qiraja", "Rryma", "Uji", "Interneti", "Paga", "Transporti", "Furnizime zyre", "Servisi", "Taksat", "Tjetër"];
 const today = () => new Date().toISOString().slice(0, 10);
@@ -105,7 +106,8 @@ export default function ExpensesPage() {
                 <td className="px-4 py-3 text-slate-300">{e.description || "—"}</td>
                 <td className="px-4 py-3 text-slate-400 text-xs">{e.created_by_name || "—"}</td>
                 <td className="px-4 py-3 text-right font-mono-pd font-semibold text-rose-400">{eur(e.amount)}</td>
-                <td className="px-2 py-2 text-right">
+                <td className="px-2 py-2 text-right whitespace-nowrap">
+                  <CorrectButton entryKey={`expense:${e.id}`} />
                   <Button size="icon" variant="ghost" onClick={() => remove(e)} className="h-8 w-8 text-red-400 hover:bg-red-500/10" data-testid={`expense-delete-${e.id}`}>
                     <Trash2 className="w-4 h-4" />
                   </Button>

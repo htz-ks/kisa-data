@@ -13,6 +13,7 @@ import SalesPage from "@/pages/SalesPage";
 import PaymentsPage from "@/pages/PaymentsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import CustomerCardsPage from "@/pages/CustomerCardsPage";
+import DailyFlowPage from "@/pages/DailyFlowPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
 import PrintSalePage from "@/pages/PrintSalePage";
@@ -43,6 +44,7 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/pos" element={<POSPage />} />
               <Route path="/sale/new" element={<SaleEntryPage />} />
+              <Route path="/daily-flow" element={<Protected adminOnly><DailyFlowPage /></Protected>} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/stock" element={<StockPage />} />
               <Route path="/categories" element={<Protected adminOnly><CategoriesPage /></Protected>} />
