@@ -42,6 +42,13 @@ export const CashCount = ({ date, count, expected, onSaved }) => {
               <td className="py-1 text-center">
                 <Input type="number" min="0" inputMode="numeric" value={q[d] ?? ""} placeholder="0"
                   onChange={(e) => setQ((x) => ({ ...x, [d]: e.target.value.replace(/[^0-9]/g, "") }))}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const next = DENOMS[DENOMS.indexOf(d) + 1];
+                    const el = document.querySelector(next ? `[data-testid="count-qty-${next}"]` : '[data-testid="count-save-btn"]');
+                    el?.focus(); el?.select?.();
+                  }}
                   className="h-8 w-24 mx-auto text-center bg-slate-900 border-slate-800" data-testid={`count-qty-${d}`} />
               </td>
               <td className="py-1 text-right font-mono-pd" data-testid={`count-line-${d}`}>{eur(Number(d) * (Number(q[d]) || 0))}</td>
