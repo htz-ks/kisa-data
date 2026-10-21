@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
@@ -204,6 +204,12 @@ export default function SaleEntryPage() {
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => navigate("/payments")} className="border-orange-400 text-orange-700 hover:bg-orange-50" data-testid="sale-goto-debts-btn">
                   <CreditCard className="w-4 h-4 mr-1" /> Borxhet
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/customer-cards")} className="border-teal-400 text-teal-700 hover:bg-teal-50" data-testid="sale-goto-customer-cards-btn">
+                  <IdCard className="w-4 h-4 mr-1" /> Kartela e blerësve
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/supplier-cards")} className="border-indigo-400 text-indigo-700 hover:bg-indigo-50" data-testid="sale-goto-supplier-cards-btn">
+                  <IdCard className="w-4 h-4 mr-1" /> Kartela e furnitorëve
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => navigate("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
                   <ShoppingBag className="w-4 h-4 mr-1" /> Blerja

@@ -51,7 +51,8 @@ function App() {
               <Route path="/purchases" element={<Protected adminOnly><PurchasesPage /></Protected>} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/payments" element={<Protected adminOnly><PaymentsPage /></Protected>} />
-              <Route path="/customer-cards" element={<Protected adminOnly><CustomerCardsPage /></Protected>} />
+              <Route path="/customer-cards" element={<Protected adminOnly><CustomerCardsPage kind="customer" /></Protected>} />
+              <Route path="/supplier-cards" element={<Protected adminOnly><CustomerCardsPage kind="supplier" /></Protected>} />
               <Route path="/expenses" element={<Protected adminOnly><ExpensesPage /></Protected>} />
               <Route path="/returns" element={<Protected adminOnly><ReturnsPage /></Protected>} />
               <Route path="/reports" element={<Protected adminOnly><ReportsPage /></Protected>} />

@@ -1381,20 +1381,19 @@ async def put_warranty_terms(body: TermsIn, _a: dict = Depends(require_admin)):
 
 
 # ---------- Customer cards (overview of all buyers) ----------
-@api.get("/customer-cards")
-async def customer_cards(_a: dict = Depends(require_admin)):
-    sales_agg = {d["_id"]: d async for d in db.sales.aggregate([
-        {"$match": {"customer_id": {"$nin": [None, ""]}}},
-        {"$group": {"_id": "$customer_id", "bought": {"$sum": "$total"}, "paid_at_sale": {"$sum": "$paid_amount"},
+async def _cards(contacts, docs, kind: str) -> list:
+    docs_agg = {d["_id"]: d async for d in docs.aggregate([
+        {"$match": {f"{kind}_id": {"$nin": [None, ""]}}},
+        {"$group": {"_id": f"${kind}_id", "bought": {"$sum": "$total"}, "paid_at_sale": {"$sum": "$paid_amount"},
                     "count": {"$sum": 1}, "last": {"$max": "$created_at"}}},
     ])}
     pay_agg = {d["_id"]: d["sum"] async for d in db.payments.aggregate([
-        {"$match": {"entity_type": "customer"}}, {"$group": {"_id": "$entity_id", "sum": {"$sum": "$amount"}}},
+        {"$match": {"entity_type": kind}}, {"$group": {"_id": "$entity_id", "sum": {"$sum": "$amount"}}},
     ])}
     out = []
-    async for c in db.customers.find({}).sort("name", 1):
+    async for c in contacts.find({}).sort("name", 1):
         cid = str(c["_id"])
-        sa = sales_agg.get(cid, {})
+        sa = docs_agg.get(cid, {})
         out.append({
             "id": cid, "name": c.get("name", ""), "phone": c.get("phone", ""),
             "invoices": sa.get("count", 0), "last_purchase": sa.get("last"),
@@ -1403,6 +1402,16 @@ async def customer_cards(_a: dict = Depends(require_admin)):
             "balance": round(c.get("balance", 0) or 0, 2),
         })
     return out
+
+
+@api.get("/customer-cards")
+async def customer_cards(_a: dict = Depends(require_admin)):
+    return await _cards(db.customers, db.sales, "customer")
+
+
+@api.get("/supplier-cards")
+async def supplier_cards(_a: dict = Depends(require_admin)):
+    return await _cards(db.suppliers, db.purchases, "supplier")
 
 
 # ---------- Customer history ----------

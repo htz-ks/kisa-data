@@ -46,6 +46,7 @@ const NAV = [
     children: [
       { to: "/payments", icon: CreditCard, label: "Pagesa / Borxhe", roles: ["admin"], tid: "nav-payments" },
       { to: "/customer-cards", icon: IdCard, label: "Kartela e blerësve", roles: ["admin"], tid: "nav-customer-cards" },
+      { to: "/supplier-cards", icon: IdCard, label: "Kartela e furnitorëve", roles: ["admin"], tid: "nav-supplier-cards" },
       { to: "/expenses", icon: Banknote, label: "Shpenzimet", roles: ["admin"], tid: "nav-expenses" },
       { to: "/reports", icon: BarChart3, label: "Raportet", roles: ["admin"], tid: "nav-reports" },
     ],

@@ -3,7 +3,14 @@ import api, { eur } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { DebtActions } from "@/components/DebtLedger";
-import { Search, CheckCircle2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, CheckCircle2, AlertCircle, HandCoins } from "lucide-react";
+import { SupplierPayDialog } from "@/components/SupplierPayDialog";
+
+const KINDS = {
+  customer: { endpoint: "/customer-cards", title: "Kartela e blerësve", who: "klientëve", col: "Klienti", bought: "Blerë", search: "Kërko klientin ose telefonin", path: "customers", empty: "Asnjë klient." },
+  supplier: { endpoint: "/supplier-cards", title: "Kartela e furnitorëve", who: "furnitorëve", col: "Furnitori", bought: "Blerë nga ai", search: "Kërko furnitorin ose telefonin", path: "suppliers", empty: "Asnjë furnitor." },
+};
 
 const FILTERS = [
   { key: "all", label: "Të gjithë" },
@@ -19,12 +26,15 @@ const StatusBadge = ({ c }) => (c.balance > 0.004 ? (
   <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" /> Paguar plotësisht</span>
 ));
 
-export default function CustomerCardsPage() {
+export default function CustomerCardsPage({ kind = "customer" }) {
+  const K = KINDS[kind];
   const [cards, setCards] = useState([]);
+  const [payFor, setPayFor] = useState(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => { api.get("/customer-cards").then(({ data }) => setCards(data)); }, []);
+  const load = () => api.get(K.endpoint).then(({ data }) => setCards(data));
+  useEffect(() => { setCards([]); load(); }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = useMemo(() => cards.filter((c) => {
     const s = q.trim().toLowerCase();
@@ -36,12 +46,12 @@ export default function CustomerCardsPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
-      <PageHeader title="Kartela e blerësve" subtitle="Pasqyra e klientëve · dërgo kartelën si foto në WhatsApp ose PDF A4" />
+      <PageHeader title={K.title} subtitle={`Pasqyra e ${K.who} · dërgo kartelën si foto në WhatsApp ose PDF A4`} />
 
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kërko klientin ose telefonin"
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={K.search}
             className="pl-9 bg-slate-900 border-slate-800" data-testid="cards-search-input" />
         </div>
         {FILTERS.map((f) => (
@@ -56,8 +66,8 @@ export default function CustomerCardsPage() {
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wider text-slate-500 font-mono-pd border-b border-slate-800">
             <tr>
-              <th className="px-4 py-3">Klienti</th><th className="px-4 py-3">Telefoni</th>
-              <th className="px-4 py-3 text-right">Fatura</th><th className="px-4 py-3 text-right">Blerë</th>
+              <th className="px-4 py-3">{K.col}</th><th className="px-4 py-3">Telefoni</th>
+              <th className="px-4 py-3 text-right">Fatura</th><th className="px-4 py-3 text-right">{K.bought}</th>
               <th className="px-4 py-3 text-right">Paguar</th><th className="px-4 py-3 text-right">Borxhi</th>
               <th className="px-4 py-3">Statusi</th><th className="px-4 py-3 text-right">Dërgo kartelën</th>
             </tr>
@@ -72,13 +82,23 @@ export default function CustomerCardsPage() {
                 <td className="px-4 py-3 text-right font-mono-pd text-emerald-400">{eur(c.paid)}</td>
                 <td className={`px-4 py-3 text-right font-mono-pd font-bold ${c.balance > 0.004 ? "text-amber-400" : "text-slate-300"}`} data-testid={`card-balance-${c.id}`}>{eur(c.balance)}</td>
                 <td className="px-4 py-3"><StatusBadge c={c} /></td>
-                <td className="px-4 py-2"><DebtActions compact customer={c} pdfPath={`/customers/${c.id}/statement.pdf`} /></td>
+                <td className="px-4 py-2">
+                  <div className="flex gap-2 justify-end">
+                    {kind === "supplier" && c.balance > 0.004 && (
+                      <Button size="sm" onClick={() => setPayFor(c)} className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold" data-testid={`card-pay-${c.id}`}>
+                        <HandCoins className="w-4 h-4 mr-1" /> Paguaj
+                      </Button>
+                    )}
+                    <DebtActions compact customer={c} pdfPath={`/${K.path}/${c.id}/statement.pdf`} />
+                  </div>
+                </td>
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">Asnjë klient.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">{K.empty}</td></tr>}
           </tbody>
         </table>
       </div>
+      <SupplierPayDialog supplier={payFor} onClose={() => setPayFor(null)} onPaid={load} />
     </div>
   );
 }
