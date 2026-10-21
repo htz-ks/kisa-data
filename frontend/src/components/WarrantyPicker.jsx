@@ -10,7 +10,7 @@ export const warrantyLabel = (v) => (v ? `${v.n} ${v.unit}` : "Sipas artikullit"
 export const WarrantyPicker = ({ value, onChange, className = "" }) => {
   const [open, setOpen] = useState(false);
   const [n, setN] = useState("");
-  const [unit, setUnit] = useState("ditë");
+  const [unit, setUnit] = useState("muaj");
 
   const pick = (v) => { onChange(v); setOpen(false); setN(""); };
   const applyTyped = () => { const x = parseInt(n, 10); if (x > 0) pick({ n: x, unit }); };
@@ -24,7 +24,7 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
           <ChevronDown className="w-4 h-4 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-2 bg-white text-slate-900 border-slate-200" data-testid="sale-warranty-menu">
+      <PopoverContent align="start" className="w-[340px] p-2 bg-white text-slate-900 border-slate-200" data-testid="sale-warranty-menu">
         <div className="flex gap-1 mb-2">
           <Input type="number" min="1" value={n} onChange={(e) => setN(e.target.value)} placeholder="nr."
             onKeyDown={(e) => e.key === "Enter" && applyTyped()} autoFocus
@@ -37,13 +37,26 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
           ))}
           <Button size="sm" className="h-8 px-2 bg-emerald-500 hover:bg-emerald-600 text-white" onClick={applyTyped} data-testid="sale-warranty-apply">OK</Button>
         </div>
-        <div className="max-h-64 overflow-y-auto border-t border-slate-200 pt-1">
+        <div className="border-t border-slate-200 pt-1">
           <Item active={!value} onClick={() => pick(null)} testId="sale-warranty-default">Sipas artikullit</Item>
-          {Array.from({ length: 12 }, (_, k) => k + 1).map((m) => (
-            <Item key={m} active={value?.unit === "muaj" && value?.n === m} onClick={() => pick({ n: m, unit: "muaj" })} testId={`sale-warranty-${m}`}>
-              {m} muaj
-            </Item>
-          ))}
+          {unit === "muaj" ? (
+            <div className="max-h-64 overflow-y-auto">
+              {Array.from({ length: 12 }, (_, k) => k + 1).map((m) => (
+                <Item key={m} active={value?.unit === "muaj" && value?.n === m} onClick={() => pick({ n: m, unit: "muaj" })} testId={`sale-warranty-${m}`}>
+                  {m} muaj
+                </Item>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-10 gap-1 max-h-64 overflow-y-auto pt-1" data-testid="sale-warranty-days-grid">
+              {Array.from({ length: 100 }, (_, k) => k + 1).map((d) => (
+                <button key={d} type="button" onClick={() => pick({ n: d, unit: "ditë" })} data-testid={`sale-warranty-day-${d}`}
+                  className={`h-7 rounded text-xs font-medium border ${value?.unit === "ditë" && value?.n === d ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-200 hover:bg-emerald-50 hover:border-emerald-400"}`}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
