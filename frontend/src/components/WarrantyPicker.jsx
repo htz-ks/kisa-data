@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Check } from "lucide-react";
 
-// value: null (= product warranty) or { n: number, unit: "muaj" | "ditë" }
-export const warrantyLabel = (v) => (v ? `${v.n} ${v.unit}` : "Sipas artikullit");
+// value: null (= no warranty) or { n: number, unit: "muaj" | "ditë" }; n = 0 also means no warranty
+export const warrantyLabel = (v) => (v && v.n > 0 ? `${v.n} ${v.unit}` : "Pa garanci");
 
 export const WarrantyPicker = ({ value, onChange, className = "" }) => {
   const [open, setOpen] = useState(false);
@@ -13,7 +13,7 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
   const [unit, setUnit] = useState("muaj");
 
   const pick = (v) => { onChange(v); setOpen(false); setN(""); };
-  const applyTyped = () => { const x = parseInt(n, 10); if (x > 0) pick({ n: x, unit }); };
+  const applyTyped = () => { const x = parseInt(n, 10); if (x >= 0) pick(x > 0 ? { n: x, unit } : null); };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -38,7 +38,7 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
           <Button size="sm" className="h-8 px-2 bg-emerald-500 hover:bg-emerald-600 text-white" onClick={applyTyped} data-testid="sale-warranty-apply">OK</Button>
         </div>
         <div className="border-t border-slate-200 pt-1">
-          <Item active={!value} onClick={() => pick(null)} testId="sale-warranty-default">Sipas artikullit</Item>
+          <Item active={!value} onClick={() => pick(null)} testId="sale-warranty-default">0 · Pa garanci</Item>
           {unit === "muaj" ? (
             <div className="max-h-64 overflow-y-auto">
               {Array.from({ length: 12 }, (_, k) => k + 1).map((m) => (
@@ -49,9 +49,9 @@ export const WarrantyPicker = ({ value, onChange, className = "" }) => {
             </div>
           ) : (
             <div className="grid grid-cols-10 gap-1 max-h-64 overflow-y-auto pt-1" data-testid="sale-warranty-days-grid">
-              {Array.from({ length: 100 }, (_, k) => k + 1).map((d) => (
-                <button key={d} type="button" onClick={() => pick({ n: d, unit: "ditë" })} data-testid={`sale-warranty-day-${d}`}
-                  className={`h-7 rounded text-xs font-medium border ${value?.unit === "ditë" && value?.n === d ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-200 hover:bg-emerald-50 hover:border-emerald-400"}`}>
+              {Array.from({ length: 101 }, (_, k) => k).map((d) => (
+                <button key={d} type="button" onClick={() => pick(d > 0 ? { n: d, unit: "ditë" } : null)} data-testid={`sale-warranty-day-${d}`}
+                  className={`h-7 rounded text-xs font-medium border ${(d === 0 ? !value : value?.unit === "ditë" && value?.n === d) ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-200 hover:bg-emerald-50 hover:border-emerald-400"}`}>
                   {d}
                 </button>
               ))}

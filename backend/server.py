@@ -228,6 +228,8 @@ class SaleIn(BaseModel):
     due_date: Optional[str] = None
     warranty_months: Optional[int] = None
     warranty_days: Optional[int] = None
+    price_mode: Literal["retail", "wholesale"] = "retail"
+    warranty_terms: Optional[str] = ""
 
 
 class PaymentIn(BaseModel):
@@ -794,6 +796,10 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
         "document_date": body.document_date,
         "due_date": body.due_date,
         "notes": body.notes,
+        "price_mode": body.price_mode,
+        # warranty terms are printed on A4 only for retail sales that carry a warranty
+        "warranty_terms": (body.warranty_terms or "").strip()
+        if body.price_mode == "retail" and any(i.get("warranty_until") for i in enriched_items) else "",
         "created_at": now_utc().isoformat(),
         "created_by": user["id"],
         "created_by_name": user.get("name", ""),
@@ -1267,6 +1273,48 @@ async def export_stock_csv(_a: dict = Depends(require_admin)):
             " | ".join(in_stock_imeis),
         ])
     return _csv_response(rows, f"stoku_{datetime.now().strftime('%Y%m%d')}.csv")
+
+
+# ---------- Settings: warranty terms ----------
+DEFAULT_WARRANTY_TERMS = """KUSHTET PËR GARANCION
+Fletë garancioni i lëshohet blerësit në bazë të ligjeve eventuale. Në rast të defektit dhe riparimit të këtij produkti, në periudhën e vlefshmërisë së garancionit, afati i garancionit vazhdon për aq ditë sa ka zgjatur riparimi.
+
+HITECHZONE
+Gjendja e rregullt gjatë periudhës së garancionit: Servisi pa pagesë dhe riparimi i telefonit në periudhën e garancionit në rastin e përdorimit sipas rregullave të servisit HITECHZONE. Servisi i autorizuar është i obliguar që ta riparojë produktin brenda 48 orëve. Pajisjet shtesë të telefonit: mbushësi (adapteri), kufjet, tastaturat dhe Bluetooth-i, ndëgjueset bëjnë pjesë në materialin harxhues dhe kanë garancion me afat 1 muaj.
+
+TË DREJTAT DHE OBLIGIMET E BLERËSIT
+Të drejtat që rrjedhin nga ky garancion, blerësi i fiton ditën e blerjes së produktit. Me nënshkrimin e fletëgarancionit, blerësi vërteton se me rastin e blerjes e ka testuar dhe është vërtetuar në rregullsinë e produktit (ka kontrolluar përmbajtjen e paketimit origjinal dhe është njoftuar për mënyrën e përdorimit). Blerësi është i obliguar që ta ruajë fletëgarancionin dhe faturën e blerjes së produktit dhe t'i paraqesë servisit HITECHZONE në rast reklamimi. Blerësi obligohet që të gjitha shënimet e veta që i ka në telefon t'i ruajë, sepse servisi HITECHZONE nuk merr përgjegjësi për ruajtjen e tyre.
+
+GARANCIONI NUK VLEN NË KËTO RASTE
+- Pas përfundimit të afatit të garancionit.
+- Nëse fletëgarancioni nuk është i plotësuar në mënyrë të rregullt, ose i vërtetuar dhe i nënshkruar nga shitësi dhe blerësi.
+- Nëse numri IMEI nuk përputhet me të dhënat e shënuara në fletëgarancion.
+- Nëse blerësi nuk e ka fletëgarancionin.
+- Nëse blerësi nuk i është përmbajtur udhëzimit për përdorim ose aparati është përdorur dhe ruajtur në mënyrë jo korrekte.
+- Nëse aparati ka pasur ndonjë lloj dëmtimi mekanik, fizik ose të shkaktuar nga përdorimi i gabuar, rënia, goditjet elektrike apo vëllime të ndryshme të energjisë.
+- Nëse gjatë përdorimit është ndërruar softueri (jailbreak) ose janë përdorur materiale/pjesë që nuk janë prodhuar apo autorizuar nga prodhuesi i aparatit.
+- Nëse aparati është hapur dhe është tentuar të riparohet nga persona të paautorizuar nga servisi HITECHZONE.
+- Nëse janë përdorur pajisje dhe aksesorë jo origjinalë ose të papërshtatshëm.
+- Nëse aparati është dëmtuar për shkak të ujit, lagështisë, rënies ose ndonjë lënde tjetër.
+- Nëse aparati është dëmtuar nga zjarri, temperaturat e larta ose faktorë të tjerë të jashtëm.
+- Nëse aparati nuk është dorëzuar me dokumentacionin e nevojshëm për verifikimin e garancionit.
+- LCD (ekrani) i telefonit nuk përfshihet në garancion."""
+
+
+class TermsIn(BaseModel):
+    text: str
+
+
+@api.get("/settings/warranty-terms")
+async def get_warranty_terms(_u: dict = Depends(get_current_user)):
+    doc = await db.settings.find_one({"key": "warranty_terms"})
+    return {"text": doc["value"] if doc else DEFAULT_WARRANTY_TERMS}
+
+
+@api.put("/settings/warranty-terms")
+async def put_warranty_terms(body: TermsIn, _a: dict = Depends(require_admin)):
+    await db.settings.update_one({"key": "warranty_terms"}, {"$set": {"value": body.text}}, upsert=True)
+    return {"text": body.text}
 
 
 # ---------- Customer cards (overview of all buyers) ----------

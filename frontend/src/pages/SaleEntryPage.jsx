@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
 import { ProductCombobox } from "@/components/ProductCombobox";
 import { WarrantyPicker } from "@/components/WarrantyPicker";
+import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
@@ -43,6 +44,8 @@ export default function SaleEntryPage() {
   const [newCustomer, setNewCustomer] = useState(false);
   const [newName, setNewName] = useState("");
   const [warranty, setWarranty] = useState(null);
+  const [terms, setTerms] = useState("");
+  useEffect(() => { api.get("/settings/warranty-terms").then(({ data }) => setTerms(data.text)); }, []);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -128,7 +131,7 @@ export default function SaleEntryPage() {
   const subtotal = useMemo(() => rows.reduce((s, r) => s + lineTotal(r), 0), [rows]);
   const total = subtotal;
 
-  const save = async () => {
+  const save = async (print = false) => {
     const items = rows.filter((r) => r.product_id).map((r) => ({
       product_id: r.product_id,
       quantity: Number(r.quantity) || 1,
@@ -155,11 +158,13 @@ export default function SaleEntryPage() {
         due_date: dueDate,
         notes,
         warranty_months: warranty?.unit === "muaj" ? warranty.n : null,
-        warranty_days: warranty?.unit === "ditë" ? warranty.n : null,
+        warranty_days: warranty?.unit === "ditë" ? warranty.n : warranty ? null : 0,
+        price_mode: priceMode,
+        warranty_terms: priceMode === "retail" ? terms : "",
       };
       const { data } = await api.post("/sales", payload);
       toast.success(`Fatura ${data.invoice_no} u ruajt`);
-      navigate("/sales");
+      navigate(print ? `/print/sale/${data.id}?format=a4&auto=1` : "/sales");
     } catch (e) {
       toast.error(formatApiErrorDetail(e.response?.data?.detail));
     } finally {
@@ -179,9 +184,14 @@ export default function SaleEntryPage() {
           <h1 className="text-xl font-bold text-slate-900">Shitja vendore <span className="text-emerald-600 font-normal">(I ri)</span></h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/sales")} data-testid="sale-cancel-btn"><X className="w-4 h-4 mr-1" /> Anulo</Button>
-            <Button size="sm" onClick={save} disabled={saving}
+            <Button size="sm" onClick={() => save(false)} disabled={saving}
               className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="sale-save-btn">
               <Save className="w-4 h-4 mr-1" /> Ruaj
+            </Button>
+            <div className="w-px h-7 bg-slate-300 mx-1" />
+            <Button size="sm" onClick={() => save(true)} disabled={saving}
+              className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid="sale-save-print-btn">
+              <Printer className="w-4 h-4 mr-1" /> Ruaj & Printo A4
             </Button>
           </div>
         </div>
@@ -366,6 +376,7 @@ export default function SaleEntryPage() {
           <div>
             <Label className={label}>Shënime</Label>
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} className={field + " mt-1"} />
+            <WarrantyTermsBox terms={terms} setTerms={setTerms} retail={priceMode === "retail"} hasWarranty={!!warranty} isAdmin={isAdmin} />
           </div>
           <div className="border border-slate-200 rounded p-4 bg-slate-50">
             <div className="space-y-1 text-sm">

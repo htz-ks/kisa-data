@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api, { eur } from "@/lib/api";
 
 /**
@@ -9,6 +9,7 @@ import api, { eur } from "@/lib/api";
 export default function PrintSalePage() {
   const { id } = useParams();
   const [sp] = useSearchParams();
+  const navigate = useNavigate();
   const format = sp.get("format") || "a4";
   const [sale, setSale] = useState(null);
 
@@ -116,11 +117,15 @@ export default function PrintSalePage() {
         .totals { margin-top:16px; margin-left:auto; width: 70mm; }
         .totals .row { display:flex; justify-content:space-between; padding: 4px 0; font-size: 13px; }
         .totals .big { font-weight:800; font-size: 16px; color:#10B981; border-top:1px solid #E2E8F0; padding-top:6px; }
+        .terms { margin-top: 18px; border-top: 1px solid #CBD5E1; padding-top: 8px; font-size: 8.5px; line-height: 1.35; color: #1E293B; }
+        .terms .th { font-weight: 800; font-size: 9.5px; margin-top: 5px; }
+        .terms .sign { display:flex; justify-content:space-between; margin-top: 22px; font-size: 11px; }
+        .terms .sign span { display:inline-block; margin-top: 18px; color:#475569; }
         @media print { .no-print { display:none !important; } }
       `}</style>
       <div className="no-print" style={{ padding: 10, background: "#eee", display: "flex", gap: 8 }}>
         <button onClick={() => window.print()} style={{ padding: "8px 14px" }}>Printo A4</button>
-        <button onClick={() => window.close()} style={{ padding: "8px 14px" }}>Mbyll</button>
+        <button onClick={() => (window.opener ? window.close() : navigate("/sales"))} style={{ padding: "8px 14px" }}>Mbyll</button>
       </div>
       <div className="wrap">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 10 }}>
@@ -171,7 +176,21 @@ export default function PrintSalePage() {
           <div className="row"><span>Paguar</span><span>€ {sale.paid_amount.toFixed(2)}</span></div>
           {sale.due_amount > 0 && <div className="row" style={{ color: "#D97706", fontWeight: 700 }}><span>Mbetur</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         </div>
-        <div style={{ marginTop: 40, fontSize: 11, color: "#64748B", textAlign: "center" }}>
+        {sale.warranty_terms && (
+          <div className="terms" data-testid="print-warranty-terms">
+            {sale.warranty_terms.split("\n").map((line, i) => {
+              const t = line.trim();
+              if (!t) return <div key={i} style={{ height: 4 }} />;
+              const heading = t === t.toUpperCase() && /[A-ZËÇ]/.test(t);
+              return <div key={i} className={heading ? "th" : ""}>{t}</div>;
+            })}
+            <div className="sign">
+              <div>Shitësi<br /><span>_______________________</span></div>
+              <div>Blerësi<br /><span>_______________________</span></div>
+            </div>
+          </div>
+        )}
+        <div style={{ marginTop: sale.warranty_terms ? 16 : 40, fontSize: 11, color: "#64748B", textAlign: "center" }}>
           Faleminderit për blerjen! — Kisa-Data POS
         </div>
       </div>
