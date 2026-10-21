@@ -29,7 +29,7 @@ export default function PrintSalePage() {
   const dateStr = (sale.created_at || "").slice(0, 19).replace("T", " ");
 
   const pageCSS = {
-    a4: "@page { size: A4; margin: 15mm; } body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color:#111; }",
+    a4: "@page { size: A4; margin: 10mm; } body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color:#111; }",
     80: "@page { size: 80mm auto; margin: 3mm; } body { font-family: Arial, sans-serif; color:#000; width: 72mm; font-size: 11px; }",
     58: "@page { size: 58mm auto; margin: 2mm; } body { font-family: Arial, sans-serif; color:#000; width: 54mm; font-size: 10px; }",
   }[format] || "";
@@ -106,22 +106,22 @@ export default function PrintSalePage() {
         ${baseCSS}
         ${pageCSS}
         * { box-sizing: border-box; }
-        .wrap { max-width: 180mm; margin: 0 auto; padding: 0 4mm; }
-        .brand { color:#10B981; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
-        .muted { color:#64748B; font-size: 11px; }
-        .box { border:1px solid #E2E8F0; border-radius:8px; padding:12px; }
-        table { width:100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
-        th { background:#0B0F17; color:#fff; padding:8px; text-align:left; }
+        .wrap { max-width: 190mm; margin: 0 auto; padding: 0; }
+        .brand { color:#10B981; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+        .muted { color:#64748B; font-size: 14px; }
+        .box { border:1px solid #E2E8F0; border-radius:8px; padding:10px 14px; font-size: 15px; }
+        table { width:100%; border-collapse: collapse; margin-top: 16px; font-size: 15px; }
+        th { background:#0B0F17; color:#fff; padding:9px 8px; text-align:left; font-size: 14px; white-space: nowrap; }
         td { padding: 8px; border-bottom:1px solid #E2E8F0; vertical-align: top; }
         .r { text-align:right; }
-        .totals { margin-top:16px; margin-left:auto; width: 70mm; }
-        .totals .row { display:flex; justify-content:space-between; padding: 4px 0; font-size: 13px; }
-        .totals .big { font-weight:800; font-size: 16px; color:#10B981; border-top:1px solid #E2E8F0; padding-top:6px; }
-        .terms { margin-top: 18px; border-top: 1px solid #CBD5E1; padding-top: 8px; font-size: 8.5px; line-height: 1.35; color: #1E293B; }
-        .terms .th { font-weight: 800; font-size: 9.5px; margin-top: 5px; }
-        .terms .sign { display:flex; justify-content:space-between; margin-top: 22px; font-size: 11px; }
+        .totals { margin-top:10px; margin-left:auto; width: 85mm; }
+        .totals .row { display:flex; justify-content:space-between; padding: 3px 0; font-size: 17px; }
+        .totals .big { font-weight:800; font-size: 22px; color:#10B981; border-top:1px solid #E2E8F0; padding-top:6px; }
+        .terms { margin-top: 10px; border-top: 1px solid #CBD5E1; padding-top: 4px; font-size: 11px; line-height: 1.3; color: #1E293B; }
+        .terms .th { font-weight: 800; font-size: 13px; margin-top: 5px; }
+        .terms .sign { display:flex; justify-content:space-between; margin-top: 12px; font-size: 15px; }
         .terms .sign span { display:inline-block; margin-top: 18px; color:#475569; }
-        @media print { .no-print { display:none !important; } }
+        @media print { .no-print { display:none !important; } html, body, #root, #root > div { min-height: 0 !important; height: auto !important; } }
       `}</style>
       <div className="no-print" style={{ padding: 10, background: "#eee", display: "flex", gap: 8 }}>
         <button onClick={() => window.print()} style={{ padding: "8px 14px" }}>Printo A4</button>
@@ -133,17 +133,17 @@ export default function PrintSalePage() {
             <div className="brand">KISA-DATA</div>
             <div className="muted">Faturë Shitjeje / Sales Invoice</div>
           </div>
-          <div className="box" style={{ minWidth: 200 }}>
-            <div style={{ fontSize: 11, color: "#64748B" }}>Nr. Faturës</div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{sale.invoice_no}</div>
-            <div style={{ fontSize: 11, marginTop: 6, color: "#64748B" }}>Data: {dateStr}</div>
-            <div style={{ fontSize: 11, color: "#64748B" }}>Pagesa: {(sale.payment_method || "").toUpperCase()}</div>
+          <div className="box" style={{ flex: 1, margin: "0 12px" }}>
+            <div style={{ fontSize: 13, color: "#64748B" }}>Klienti</div>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>{sale.customer_name || "Qytetar"}</div>
+            <div style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>Shitësi: {sale.created_by_name || "—"}</div>
           </div>
-        </div>
-        <div style={{ marginTop: 14 }} className="box">
-          <div style={{ fontSize: 11, color: "#64748B" }}>Klienti</div>
-          <div style={{ fontWeight: 600 }}>{sale.customer_name || "Qytetar"}</div>
-          <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>Shitësi: {sale.created_by_name || "—"}</div>
+          <div className="box" style={{ minWidth: 200 }}>
+            <div style={{ fontSize: 13, color: "#64748B" }}>Nr. Faturës</div>
+            <div style={{ fontWeight: 700, fontSize: 20 }}>{sale.invoice_no}</div>
+            <div style={{ fontSize: 13, marginTop: 6, color: "#64748B" }}>Data: {dateStr}</div>
+            <div style={{ fontSize: 13, color: "#64748B" }}>Pagesa: {(sale.payment_method || "").toUpperCase()}</div>
+          </div>
         </div>
         <table>
           <thead>
@@ -155,12 +155,12 @@ export default function PrintSalePage() {
           <tbody>
             {sale.items.map((it, i) => (
               <tr key={i}>
-                <td style={{ fontFamily: "monospace", fontSize: 11 }}>{it.product_code || "—"}</td>
-                <td style={{ fontFamily: "monospace", fontSize: 11 }}>{it.barcode || "—"}</td>
+                <td style={{ fontFamily: "monospace", fontSize: 13 }}>{it.product_code || "—"}</td>
+                <td style={{ fontFamily: "monospace", fontSize: 13 }}>{it.barcode || "—"}</td>
                 <td>{it.product_name}</td>
-                <td style={{ fontFamily: "monospace", fontSize: 11 }}>
+                <td style={{ fontFamily: "monospace", fontSize: 13 }}>
                   {it.imei || "—"}
-                  {it.warranty_until && <div style={{ color: "#059669" }}>Garanci{it.warranty_label ? ` ${it.warranty_label}` : ""} deri: {(it.warranty_until || "").slice(0,10)}</div>}
+                  {it.warranty_until && <div style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap" }}>Garanci{it.warranty_label ? ` ${it.warranty_label}` : ""} deri: {(it.warranty_until || "").slice(0,10)}</div>}
                 </td>
                 <td className="r">{it.quantity}</td>
                 <td className="r">{Number(it.sale_price).toFixed(2)}</td>
@@ -180,7 +180,7 @@ export default function PrintSalePage() {
           <div className="terms" data-testid="print-warranty-terms">
             {sale.warranty_terms.split("\n").map((line, i) => {
               const t = line.trim();
-              if (!t) return <div key={i} style={{ height: 4 }} />;
+              if (!t) return null;
               const heading = t === t.toUpperCase() && /[A-ZËÇ]/.test(t);
               return <div key={i} className={heading ? "th" : ""}>{t}</div>;
             })}
@@ -190,9 +190,11 @@ export default function PrintSalePage() {
             </div>
           </div>
         )}
-        <div style={{ marginTop: sale.warranty_terms ? 16 : 40, fontSize: 11, color: "#64748B", textAlign: "center" }}>
-          Faleminderit për blerjen! — Kisa-Data POS
-        </div>
+        {!sale.warranty_terms && (
+          <div style={{ marginTop: 40, fontSize: 12, color: "#64748B", textAlign: "center" }}>
+            Faleminderit për blerjen! — Kisa-Data POS
+          </div>
+        )}
       </div>
     </div>
   );
