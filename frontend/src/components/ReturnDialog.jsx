@@ -19,8 +19,10 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
   const [qty, setQty] = useState({}); // index -> quantity
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [manual, setManual] = useState(null); // manual refund amount (string) or null = automatic
 
   useEffect(() => {
+    setManual(null);
     if (!saleId) { setSale(null); setQty({}); setReason(""); return; }
     api.get(`/sales/${saleId}`).then(({ data }) => {
       setSale(data);
@@ -43,14 +45,19 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
     setQty((p) => ({ ...p, [i]: n }));
   };
 
-  const refund = sale ? Object.entries(qty).reduce((s, [i, q]) => s + Number(sale.items[i]?.sale_price || 0) * Number(q || 0), 0) : 0;
+  // price actually paid per unit after the invoice discount
+  const factor = sale && sale.subtotal > 0 ? sale.total / sale.subtotal : 1;
+  const paidUnit = (it) => Math.round(Number(it.sale_price || 0) * factor * 100) / 100;
+  const maxRefund = sale ? Math.max(0, (sale.total || 0) - (sale.refunded_amount || 0)) : 0;
+  const auto = sale ? Math.min(maxRefund, Object.entries(qty).reduce((s, [i, q]) => s + paidUnit(sale.items[i] || {}) * Number(q || 0), 0)) : 0;
+  const refund = manual === null ? auto : Math.min(maxRefund, Math.max(0, Number(manual) || 0));
 
   const submit = async () => {
     const items = Object.entries(qty).filter(([, q]) => Number(q) > 0).map(([i, q]) => ({ index: Number(i), quantity: Number(q) }));
     if (items.length === 0) { toast.error("Zgjidh të paktën një artikull"); return; }
     setSaving(true);
     try {
-      await api.post(`/sales/${saleId}/return`, { items, reason });
+      await api.post(`/sales/${saleId}/return`, { items, reason, refund_amount: Math.round(refund * 100) / 100 });
       toast.success("Rikthimi u ruajt");
       onDone?.();
       onClose();
@@ -87,7 +94,9 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
                         <div className="text-sm font-medium truncate">{it.product_name}</div>
                         {it.imei && <div className="imei-badge mt-1">{it.imei}</div>}
                         <div className="text-xs text-slate-500 mt-1">
-                          {eur(it.sale_price)} × blerë {it.quantity}
+                          {paidUnit(it) < Number(it.sale_price) ? (
+                            <>Çmimi {eur(it.sale_price)} · <span className="text-emerald-400">paguar {eur(paidUnit(it))}</span> (me zbritje)</>
+                          ) : eur(it.sale_price)} × blerë {it.quantity}
                           {Number(it.returned_quantity || 0) > 0 && <span className="text-amber-400"> · të kthyera {it.returned_quantity}</span>}
                         </div>
                       </div>
@@ -114,9 +123,26 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
                 placeholder="p.sh. defekt, s'i përshtatet…" className="mt-1 bg-slate-900 border-slate-800" data-testid="return-reason-input" />
             </div>
 
-            <div className="flex justify-between items-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-              <span className="text-sm font-medium text-amber-200">Shuma për t'u kthyer</span>
-              <span className="text-2xl font-bold text-amber-400 font-mono-pd" data-testid="return-refund-amount">{eur(refund)}</span>
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <div className="flex justify-between items-center text-xs text-amber-200/80">
+                <span>Llogaritur sipas pagesës së klientit{sale.discount > 0 ? ` (zbritje ${eur(sale.discount)})` : ""}</span>
+                <span className="font-mono-pd" data-testid="return-auto-amount">{eur(auto)}</span>
+              </div>
+              <div className="flex justify-between items-center gap-3">
+                <span className="text-sm font-medium text-amber-200">Shuma për t'u kthyer</span>
+                <div className="flex items-center gap-2">
+                  <Input type="number" step="0.01" min="0" value={manual === null ? auto.toFixed(2) : manual}
+                    onChange={(e) => setManual(e.target.value)}
+                    className="w-32 h-10 text-right text-xl font-bold text-amber-400 font-mono-pd bg-slate-900 border-amber-500/40" data-testid="return-refund-input" />
+                  {manual !== null && (
+                    <Button size="sm" variant="ghost" onClick={() => setManual(null)} className="text-xs text-slate-400" data-testid="return-refund-reset">Auto</Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-slate-400">
+                <span>Maksimumi që mund të kthehet</span><span className="font-mono-pd">{eur(maxRefund)}</span>
+              </div>
+              <div className="text-right text-2xl font-bold text-amber-400 font-mono-pd" data-testid="return-refund-amount">{eur(refund)}</div>
             </div>
 
             {sale.customer_id && sale.due_amount > 0 && refund > 0 && (

@@ -249,6 +249,7 @@ class ReturnItem(BaseModel):
 class ReturnIn(BaseModel):
     items: List[ReturnItem]
     reason: Optional[str] = ""
+    refund_amount: Optional[float] = None  # manual override of the refund
 
 
 # ---------- Auth dependency ----------
@@ -1013,6 +1014,10 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
     items = sale.get("items", []) or []
     returned_items = []
     refund_total = 0.0
+    # sale-level discount is spread proportionally: customer paid total/subtotal of each price
+    subtotal = float(sale.get("subtotal", 0) or 0)
+    factor = (float(sale.get("total", 0) or 0) / subtotal) if subtotal > 0 else 1.0
+    max_refundable = round(float(sale.get("total", 0) or 0) - float(sale.get("refunded_amount", 0) or 0), 2)
 
     for ret in body.items:
         if ret.index < 0 or ret.index >= len(items):
@@ -1048,7 +1053,7 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
                 )
 
         item["returned_quantity"] = already_returned + qty
-        line_refund = float(item.get("sale_price", 0)) * qty
+        line_refund = round(float(item.get("sale_price", 0)) * factor, 2) * qty
         refund_total += line_refund
         returned_items.append({
             "product_id": item["product_id"],
@@ -1061,6 +1066,11 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
 
     if not returned_items:
         raise HTTPException(400, "Asgjë për t'u kthyer")
+    computed = round(min(refund_total, max(0.0, max_refundable)), 2)
+    refund_total = computed if body.refund_amount is None else round(min(max(0.0, body.refund_amount), max(0.0, max_refundable)), 2)
+    scale = (refund_total / sum(r["line_refund"] for r in returned_items)) if sum(r["line_refund"] for r in returned_items) else 0
+    for r in returned_items:
+        r["line_refund"] = round(r["line_refund"] * scale, 2)
 
     # reverse payment: reduce customer debt first (if any), rest = cash refund out
     debt_reduction = 0.0
@@ -1077,10 +1087,7 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
         )
 
     # update sale document (items with returned_quantity, totals)
-    returned_sum = sum(
-        float(i.get("sale_price", 0)) * int(i.get("returned_quantity", 0) or 0)
-        for i in items
-    )
+    returned_sum = round(float(sale.get("refunded_amount", 0) or 0) + refund_total, 2)
     original_subtotal = float(sale.get("subtotal", 0) or 0)
     fully_returned = all(
         int(i.get("returned_quantity", 0) or 0) >= int(i.get("quantity", 0))
@@ -1091,6 +1098,7 @@ async def create_return(sid: str, body: ReturnIn, user: dict = Depends(require_a
         {"$set": {
             "items": items,
             "returned_total": returned_sum,
+            "refunded_amount": returned_sum,
             "due_amount": sale.get("due_amount", 0),
             "status": "returned" if fully_returned else "partial_return",
         }},
