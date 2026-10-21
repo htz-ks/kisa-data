@@ -1414,6 +1414,77 @@ async def supplier_cards(_a: dict = Depends(require_admin)):
     return await _cards(db.suppliers, db.purchases, "supplier")
 
 
+# ---------- Zakat (per year) ----------
+class ZakatIn(BaseModel):
+    year: int
+    stock_cost: float = 0
+    margin_pct: float = 10
+    amount: float
+
+
+class ZakatPayIn(BaseModel):
+    amount: float
+    notes: Optional[str] = ""
+
+
+@api.get("/zakat")
+async def list_zakat(_a: dict = Depends(require_admin)):
+    out = []
+    async for z in db.zakat.find({}).sort("year", -1):
+        zid = str(z["_id"])
+        pays = [doc_to_json(p) for p in await db.zakat_payments.find({"zakat_id": zid}).sort("created_at", -1).to_list(1000)]
+        paid = round(sum(p["amount"] for p in pays), 2)
+        out.append({**doc_to_json(z), "paid": paid, "remaining": round(z["amount"] - paid, 2), "payments": pays})
+    return out
+
+
+@api.post("/zakat")
+async def create_zakat(body: ZakatIn, _a: dict = Depends(require_admin)):
+    if body.amount <= 0:
+        raise HTTPException(400, "Shuma e Zekatit duhet të jetë më e madhe se 0")
+    if await db.zakat.find_one({"year": body.year}):
+        raise HTTPException(400, f"Zekati për vitin {body.year} ekziston tashmë")
+    doc = {**body.model_dump(), "amount": round(body.amount, 2), "created_at": now_utc().isoformat()}
+    r = await db.zakat.insert_one(doc)
+    doc["_id"] = r.inserted_id
+    return doc_to_json(doc)
+
+
+@api.delete("/zakat/{zid}")
+async def delete_zakat(zid: str, _a: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(zid):
+        raise HTTPException(404, "Nuk u gjet")
+    await db.zakat.delete_one({"_id": ObjectId(zid)})
+    await db.zakat_payments.delete_many({"zakat_id": zid})
+    return {"ok": True}
+
+
+@api.post("/zakat/{zid}/payments")
+async def pay_zakat(zid: str, body: ZakatPayIn, user: dict = Depends(require_admin)):
+    z = await db.zakat.find_one({"_id": ObjectId(zid)}) if ObjectId.is_valid(zid) else None
+    if not z:
+        raise HTTPException(404, "Zekati nuk u gjet")
+    if body.amount <= 0:
+        raise HTTPException(400, "Shuma duhet të jetë më e madhe se 0")
+    paid = sum(p["amount"] for p in await db.zakat_payments.find({"zakat_id": zid}).to_list(1000))
+    remaining = round(z["amount"] - paid, 2)
+    if body.amount > remaining + 0.001:
+        raise HTTPException(400, f"Pagesa është më e madhe se mbetja ({remaining:.2f} €)")
+    doc = {"zakat_id": zid, "amount": round(body.amount, 2), "notes": body.notes or "",
+           "remaining_after": round(remaining - body.amount, 2), "created_at": now_utc().isoformat(), "created_by": user["id"]}
+    r = await db.zakat_payments.insert_one(doc)
+    doc["_id"] = r.inserted_id
+    return doc_to_json(doc)
+
+
+@api.delete("/zakat/payments/{pid}")
+async def delete_zakat_payment(pid: str, _a: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(pid):
+        raise HTTPException(404, "Nuk u gjet")
+    await db.zakat_payments.delete_one({"_id": ObjectId(pid)})
+    return {"ok": True}
+
+
 # ---------- Customer history ----------
 @api.get("/customers/{cid}/history")
 async def customer_history(cid: str, _u: dict = Depends(get_current_user)):

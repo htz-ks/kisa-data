@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Smartphone, Headphones, Search, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { ZakatSection } from "@/components/ZakatSection";
 
 export default function StockPage() {
   const [products, setProducts] = useState([]);
   const [view, setView] = useState(null); // null | "phone" | "accessory"
   const [q, setQ] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => { api.get("/products").then(({ data }) => setProducts(data)); }, []);
 
@@ -78,6 +81,7 @@ export default function StockPage() {
               </div>
             </button>
           </div>
+          {user?.role === "admin" && <ZakatSection stockCost={totalValue} />}
         </div>
       </div>
     );
