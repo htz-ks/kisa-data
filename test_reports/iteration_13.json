@@ -1,0 +1,23 @@
+{
+  "summary": "Tested Kartela e blerësve/furnitorëve buttons on /sale/new, /customer-cards, new /supplier-cards page, SupplierPayDialog, supplier statement PDF/PNG, and role gating. Everything requested works.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CustomerCardsPage StatusBadge (kind=supplier)", "issue": "A supplier with a negative balance (e.g. S1 at -675) shows 'Paguar tepër (në favor të klientit)'. For suppliers the wording should not say 'klientit'; something like 'në favorin tonë' fits better.", "selector": "card-row-6ad4030fa557153e298742fe", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_supplier_cards.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": ["(Low) Change the overpaid status badge text for suppliers so it does not mention the client"],
+  "critical_code_review_comments": [
+    "_cards: 'paid' is calculated (paid_amount at sale/purchase + payments), but 'balance' is read from the stored contact.balance. They match for every supplier today, but they can drift apart if balance is ever edited by hand.",
+    "The 'paid' filter skips contacts with 0 invoices, as intended. Overpaid contacts (negative balance) also count as 'paid'."
+  ],
+  "updated_files": ["/app/backend/tests/test_supplier_cards.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100%"},
+  "seed_data_creation": "None kept. The UI test payment of 10 EUR to Callie CN was deleted (balance back to 920). The pytest payment of 5 EUR is created and deleted inside the test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Callie CN id 6ad745f3325d65d41e1d2e8f, balance 920. Admin buttons on /sale/new: sale-goto-*-btn. Employee is redirected to /dashboard from /supplier-cards. The PDF button calls window.open on /api/suppliers/{id}/statement.pdf, which works through the auth cookie."
+}

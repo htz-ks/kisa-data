@@ -81,3 +81,5 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 ## 2026-06 Update
 - SaleEntryPage: added quick buttons Artikujt (/products), Stoku (/stock), Borxhet (/payments) next to Blerja/Kthimi/Shpenzimet
 - ProductFormDialog: Barkod full-width, IMEI section directly below it (verified in Purchases "Krijo Artikull")
+
+- 2026-06: Kartela e furnitorëve (/supplier-cards, GET /api/supplier-cards) with Paguaj dialog, PDF/WhatsApp; buttons Kartela e blerësve/furnitorëve on Shitja vendore (admin)

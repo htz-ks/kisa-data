@@ -18,10 +18,10 @@ const FILTERS = [
   { key: "debt", label: "Me borxh" },
 ];
 
-const StatusBadge = ({ c }) => (c.balance > 0.004 ? (
+const StatusBadge = ({ c, kind }) => (c.balance > 0.004 ? (
   <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-400"><AlertCircle className="w-3.5 h-3.5" /> Borxh</span>
 ) : c.balance < -0.004 ? (
-  <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-500"><CheckCircle2 className="w-3.5 h-3.5" /> Paguar tepër (në favor të klientit)</span>
+  <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-500"><CheckCircle2 className="w-3.5 h-3.5" /> {kind === "supplier" ? "Paguar tepër (në favorin tonë)" : "Paguar tepër (në favor të klientit)"}</span>
 ) : (
   <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" /> Paguar plotësisht</span>
 ));
@@ -81,7 +81,7 @@ export default function CustomerCardsPage({ kind = "customer" }) {
                 <td className="px-4 py-3 text-right font-mono-pd">{eur(c.bought)}</td>
                 <td className="px-4 py-3 text-right font-mono-pd text-emerald-400">{eur(c.paid)}</td>
                 <td className={`px-4 py-3 text-right font-mono-pd font-bold ${c.balance > 0.004 ? "text-amber-400" : "text-slate-300"}`} data-testid={`card-balance-${c.id}`}>{eur(c.balance)}</td>
-                <td className="px-4 py-3"><StatusBadge c={c} /></td>
+                <td className="px-4 py-3"><StatusBadge c={c} kind={kind} /></td>
                 <td className="px-4 py-2">
                   <div className="flex gap-2 justify-end">
                     {kind === "supplier" && c.balance > 0.004 && (
