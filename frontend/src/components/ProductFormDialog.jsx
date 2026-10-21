@@ -213,7 +213,7 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="col-span-2">
             <Label>Barkod</Label>
             <div className="flex gap-2 mt-1">
               <Input value={form.barcode} onChange={(e) => set({ barcode: e.target.value })}

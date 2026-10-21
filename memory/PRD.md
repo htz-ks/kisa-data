@@ -77,3 +77,7 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Blerje e re: butonat "Shto furnitor" (dialog i shpejtë, zgjidhet vetë) dhe "Krijo artikull" (ProductFormDialog catalogOnly → shtohet si rresht në blerje, pa dyfishim stoku).
 - Rikthimi: shuma llogaritet sipas pagesës pas zbritjes (çmimi × total/nëntotal), maksimumi = totali − të kthyerat më parë (refunded_amount); shuma mund të shkruhet manualisht (refund_amount), butoni Auto.
 - RREGULL: Fusha IMEI te forma e artikullit shfaqet GJITHMONË poshtë Barkodit gjatë krijimit (edhe nga Blerja/Shitja); mos e fshih më. Shtimi i IMEI e kthen llojin në Telefon; nga Blerja IMEI-t kalojnë te rreshti i blerjes.
+
+## 2026-06 Update
+- SaleEntryPage: added quick buttons Artikujt (/products), Stoku (/stock), Borxhet (/payments) next to Blerja/Kthimi/Shpenzimet
+- ProductFormDialog: Barkod full-width, IMEI section directly below it (verified in Purchases "Krijo Artikull")

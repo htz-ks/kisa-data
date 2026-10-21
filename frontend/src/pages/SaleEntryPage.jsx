@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
@@ -196,6 +196,15 @@ export default function SaleEntryPage() {
             {isAdmin && (
               <>
                 <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
+                <Button size="sm" variant="outline" onClick={() => navigate("/products")} className="border-sky-400 text-sky-700 hover:bg-sky-50" data-testid="sale-goto-products-btn">
+                  <List className="w-4 h-4 mr-1" /> Artikujt
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/stock")} className="border-emerald-400 text-emerald-700 hover:bg-emerald-50" data-testid="sale-goto-stock-btn">
+                  <Warehouse className="w-4 h-4 mr-1" /> Stoku
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/payments")} className="border-orange-400 text-orange-700 hover:bg-orange-50" data-testid="sale-goto-debts-btn">
+                  <CreditCard className="w-4 h-4 mr-1" /> Borxhet
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => navigate("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
                   <ShoppingBag className="w-4 h-4 mr-1" /> Blerja
                 </Button>
