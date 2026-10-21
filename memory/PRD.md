@@ -73,3 +73,4 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - Fatura A4: shkronja më të mëdha (tabela 15px, totali 22px, kushtet 11px); klienti në krye pranë nr. faturës; 1–3 telefona + kushtet hyjnë në një faqe.
 - Branding faturash: logo HITECHZONE (/htz-logo.png, backend/assets) + HIGH TECH ZONE SH.P.K., Rr. Henri Dunan nr. 6, NUI 811313620, Tel 044 104 605, htz.ks@hotmail.com në A4, 80/58mm, PDF fature dhe kartelë borxhi (frontend/src/lib/company.js, COMPANY në server.py).
 - Kushtet e garancionit në A4: shkronja 14px (titujt 16px); mund të kalojnë në faqe të dytë.
+- Shitja vendore: butonat Blerja (/purchases?new=1), Kthimi i produktit (/returns?new=1 – gjej faturën me nr. ose IMEI), Shpenzimet (/expenses: CRUD, filtër sipas muajit, totali; nav Financa > Shpenzimet).

@@ -180,22 +180,22 @@ export default function SaleEntryPage() {
     <div className="min-h-screen bg-slate-100 p-4 md:p-6" data-testid="sale-entry-page">
       <div className="max-w-[1400px] mx-auto bg-white border border-slate-300 rounded-lg shadow-sm">
         {/* Title bar */}
-        <div className="border-b border-slate-300 px-5 py-3 flex items-center justify-between bg-slate-50 rounded-t-lg">
+        <div className="border-b border-slate-300 px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 rounded-t-lg">
           <h1 className="text-xl font-bold text-slate-900">Shitja vendore <span className="text-emerald-600 font-normal">(I ri)</span></h1>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center md:justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/sales")} data-testid="sale-cancel-btn"><X className="w-4 h-4 mr-1" /> Anulo</Button>
             <Button size="sm" onClick={() => save(false)} disabled={saving}
               className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="sale-save-btn">
               <Save className="w-4 h-4 mr-1" /> Ruaj
             </Button>
-            <div className="w-px h-7 bg-slate-300 mx-1" />
+            <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
             <Button size="sm" onClick={() => save(true)} disabled={saving}
               className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid="sale-save-print-btn">
               <Printer className="w-4 h-4 mr-1" /> Ruaj & Printo A4
             </Button>
             {isAdmin && (
               <>
-                <div className="w-px h-7 bg-slate-300 mx-1" />
+                <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
                 <Button size="sm" variant="outline" onClick={() => navigate("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
                   <ShoppingBag className="w-4 h-4 mr-1" /> Blerja
                 </Button>

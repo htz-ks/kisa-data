@@ -837,7 +837,7 @@ def _company_header(subtitle: str) -> list:
 
 @api.get("/sales/{sid}/invoice.pdf")
 async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
-    sale = await db.sales.find_one({"_id": ObjectId(sid)})
+    sale = await db.sales.find_one({"_id": ObjectId(sid)}) if ObjectId.is_valid(sid) else None
     if not sale:
         raise HTTPException(404, "Shitja nuk u gjet")
 
@@ -1311,7 +1311,12 @@ async def create_expense(body: ExpenseIn, user: dict = Depends(require_admin)):
         raise HTTPException(400, "Shuma duhet të jetë më e madhe se 0")
     doc = body.model_dump()
     doc["category"] = (doc["category"] or "Tjetër").strip()
-    doc["date"] = doc["date"] or now_utc().date().isoformat()
+    try:
+        doc["date"] = datetime.fromisoformat(doc["date"]).date().isoformat() if doc["date"] else now_utc().date().isoformat()
+    except ValueError:
+        raise HTTPException(400, "Data nuk është e vlefshme")
+    doc["description"] = (doc["description"] or "")[:300]
+    doc["category"] = doc["category"][:60]
     doc.update({"created_at": now_utc().isoformat(), "created_by": user["id"], "created_by_name": user.get("name", "")})
     r = await db.expenses.insert_one(doc)
     doc["_id"] = r.inserted_id
