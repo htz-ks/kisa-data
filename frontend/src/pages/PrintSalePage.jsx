@@ -123,9 +123,9 @@ export default function PrintSalePage() {
         .totals { margin-top:10px; margin-left:auto; width: 85mm; }
         .totals .row { display:flex; justify-content:space-between; padding: 3px 0; font-size: 17px; }
         .totals .big { font-weight:800; font-size: 22px; color:#10B981; border-top:1px solid #E2E8F0; padding-top:6px; }
-        .terms { margin-top: 10px; border-top: 1px solid #CBD5E1; padding-top: 4px; font-size: 11px; line-height: 1.3; color: #1E293B; }
-        .terms .th { font-weight: 800; font-size: 13px; margin-top: 5px; }
-        .terms .sign { display:flex; justify-content:space-between; margin-top: 12px; font-size: 15px; }
+        .terms { margin-top: 14px; border-top: 1px solid #CBD5E1; padding-top: 6px; font-size: 14px; line-height: 1.4; color: #1E293B; }
+        .terms .th { font-weight: 800; font-size: 16px; margin-top: 8px; }
+        .terms .sign { display:flex; justify-content:space-between; margin-top: 24px; font-size: 16px; page-break-inside: avoid; }
         .terms .sign span { display:inline-block; margin-top: 18px; color:#475569; }
         @media print { .no-print { display:none !important; } html, body, #root, #root > div { min-height: 0 !important; height: auto !important; } }
       `}</style>
@@ -168,7 +168,7 @@ export default function PrintSalePage() {
                 <td>{it.product_name}</td>
                 <td style={{ fontFamily: "monospace", fontSize: 13 }}>
                   {it.imei || "—"}
-                  {it.warranty_until && <div style={{ color: "#059669", fontSize: 11, whiteSpace: "nowrap" }}>Garanci{it.warranty_label ? ` ${it.warranty_label}` : ""} deri: {(it.warranty_until || "").slice(0,10)}</div>}
+                  {it.warranty_until && <div style={{ color: "#059669", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>Garanci{it.warranty_label ? ` ${it.warranty_label}` : ""} deri: {(it.warranty_until || "").slice(0,10)}</div>}
                 </td>
                 <td className="r">{it.quantity}</td>
                 <td className="r">{Number(it.sale_price).toFixed(2)}</td>
