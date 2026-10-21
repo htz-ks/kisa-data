@@ -2,17 +2,47 @@ import { useEffect, useState } from "react";
 import api, { eur } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
-import { Undo2 } from "lucide-react";
+import { Undo2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import ReturnDialog from "@/components/ReturnDialog";
+import { toast } from "sonner";
 
 export default function ReturnsPage() {
   const [list, setList] = useState([]);
-  useEffect(() => { api.get("/returns").then(({ data }) => setList(data)); }, []);
+  const [q, setQ] = useState("");
+  const [saleId, setSaleId] = useState(null);
+  const load = () => api.get("/returns").then(({ data }) => setList(data));
+  useEffect(() => { load(); }, []);
+
+  // find invoice by number or phone IMEI, then open the return dialog
+  const find = async () => {
+    const term = q.trim().toLowerCase();
+    if (!term) return;
+    const { data } = await api.get("/sales");
+    const sale = data.find((s) => (s.invoice_no || "").toLowerCase() === term || (s.invoice_no || "").toLowerCase().endsWith(term))
+      || data.find((s) => (s.items || []).some((it) => (it.imei || "").toLowerCase() === term));
+    if (!sale) { toast.error(`Nuk u gjet fatura ose IMEI "${q}"`); return; }
+    setSaleId(sale.id);
+  };
 
   const total = list.reduce((s, r) => s + (r.refund_total || 0), 0);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       <PageHeader title="Rikthimet" subtitle="Historia e produkteve të kthyera dhe pagesave të kundërta" />
+
+      <div className="stat-card mb-4" data-testid="return-new-box">
+        <div className="text-sm font-semibold mb-2">Kthim i ri i produktit</div>
+        <div className="flex gap-2 max-w-xl">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} autoFocus
+            placeholder="Shkruaj nr. e faturës (p.sh. 00170) ose IMEI e telefonit" className="bg-slate-900 border-slate-800" data-testid="return-search-input" />
+          <Button onClick={find} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold" data-testid="return-search-btn">
+            <Search className="w-4 h-4 mr-1" /> Gjej faturën
+          </Button>
+        </div>
+      </div>
+      <ReturnDialog saleId={saleId} onClose={() => setSaleId(null)} onDone={() => { setQ(""); load(); }} />
 
       <div className="stat-card mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">

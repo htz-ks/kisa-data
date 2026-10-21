@@ -11,6 +11,7 @@ import PurchasesPage from "@/pages/PurchasesPage";
 import POSPage from "@/pages/POSPage";
 import SalesPage from "@/pages/SalesPage";
 import PaymentsPage from "@/pages/PaymentsPage";
+import ExpensesPage from "@/pages/ExpensesPage";
 import CustomerCardsPage from "@/pages/CustomerCardsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
@@ -51,6 +52,7 @@ function App() {
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/payments" element={<Protected adminOnly><PaymentsPage /></Protected>} />
               <Route path="/customer-cards" element={<Protected adminOnly><CustomerCardsPage /></Protected>} />
+              <Route path="/expenses" element={<Protected adminOnly><ExpensesPage /></Protected>} />
               <Route path="/returns" element={<Protected adminOnly><ReturnsPage /></Protected>} />
               <Route path="/reports" element={<Protected adminOnly><ReportsPage /></Protected>} />
               <Route path="/users" element={<Protected adminOnly><UsersPage /></Protected>} />

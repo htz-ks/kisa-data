@@ -1291,6 +1291,40 @@ async def export_stock_csv(_a: dict = Depends(require_admin)):
     return _csv_response(rows, f"stoku_{datetime.now().strftime('%Y%m%d')}.csv")
 
 
+# ---------- Expenses ----------
+class ExpenseIn(BaseModel):
+    category: str = "Tjetër"
+    description: Optional[str] = ""
+    amount: float
+    date: Optional[str] = None
+
+
+@api.get("/expenses")
+async def list_expenses(_a: dict = Depends(require_admin)):
+    data = await db.expenses.find({}).sort("date", -1).to_list(5000)
+    return [doc_to_json(e) for e in data]
+
+
+@api.post("/expenses")
+async def create_expense(body: ExpenseIn, user: dict = Depends(require_admin)):
+    if body.amount <= 0:
+        raise HTTPException(400, "Shuma duhet të jetë më e madhe se 0")
+    doc = body.model_dump()
+    doc["category"] = (doc["category"] or "Tjetër").strip()
+    doc["date"] = doc["date"] or now_utc().date().isoformat()
+    doc.update({"created_at": now_utc().isoformat(), "created_by": user["id"], "created_by_name": user.get("name", "")})
+    r = await db.expenses.insert_one(doc)
+    doc["_id"] = r.inserted_id
+    return doc_to_json(doc)
+
+
+@api.delete("/expenses/{eid}")
+async def delete_expense(eid: str, _a: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(eid) or not await db.expenses.find_one_and_delete({"_id": ObjectId(eid)}):
+        raise HTTPException(404, "Shpenzimi nuk u gjet")
+    return {"ok": True}
+
+
 # ---------- Settings: warranty terms ----------
 DEFAULT_WARRANTY_TERMS = """KUSHTET PËR GARANCION
 Fletë garancioni i lëshohet blerësit në bazë të ligjeve eventuale. Në rast të defektit dhe riparimit të këtij produkti, në periudhën e vlefshmërisë së garancionit, afati i garancionit vazhdon për aq ditë sa ka zgjatur riparimi.

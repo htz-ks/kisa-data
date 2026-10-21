@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
@@ -182,7 +182,7 @@ export default function SaleEntryPage() {
         {/* Title bar */}
         <div className="border-b border-slate-300 px-5 py-3 flex items-center justify-between bg-slate-50 rounded-t-lg">
           <h1 className="text-xl font-bold text-slate-900">Shitja vendore <span className="text-emerald-600 font-normal">(I ri)</span></h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/sales")} data-testid="sale-cancel-btn"><X className="w-4 h-4 mr-1" /> Anulo</Button>
             <Button size="sm" onClick={() => save(false)} disabled={saving}
               className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="sale-save-btn">
@@ -193,6 +193,20 @@ export default function SaleEntryPage() {
               className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid="sale-save-print-btn">
               <Printer className="w-4 h-4 mr-1" /> Ruaj & Printo A4
             </Button>
+            {isAdmin && (
+              <>
+                <div className="w-px h-7 bg-slate-300 mx-1" />
+                <Button size="sm" variant="outline" onClick={() => navigate("/purchases?new=1")} className="border-violet-400 text-violet-700 hover:bg-violet-50" data-testid="sale-goto-purchase-btn">
+                  <ShoppingBag className="w-4 h-4 mr-1" /> Blerja
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/returns?new=1")} className="border-amber-400 text-amber-700 hover:bg-amber-50" data-testid="sale-goto-return-btn">
+                  <Undo2 className="w-4 h-4 mr-1" /> Kthimi i produktit
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => navigate("/expenses?new=1")} className="border-rose-400 text-rose-700 hover:bg-rose-50" data-testid="sale-goto-expense-btn">
+                  <Banknote className="w-4 h-4 mr-1" /> Shpenzimet
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

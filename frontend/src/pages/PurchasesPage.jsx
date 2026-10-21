@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api, { eur, formatApiErrorDetail } from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
@@ -17,7 +18,9 @@ export default function PurchasesPage() {
   const [purchases, setPurchases] = useState([]);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [sp, setSp] = useSearchParams();
+  const [open, setOpen] = useState(sp.get("new") === "1");
+  useEffect(() => { if (sp.get("new")) setSp({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [supplierId, setSupplierId] = useState("");
   const [paid, setPaid] = useState(0);
   const [items, setItems] = useState([{ product_id: "", quantity: 1, cost_price: 0, imeis: [], imeiInput: "" }]);
