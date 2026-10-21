@@ -74,7 +74,7 @@ export default function ReturnDialog({ saleId, onClose, onDone }) {
         {sale && (
           <div className="space-y-4">
             <div className="text-xs text-slate-500">
-              Klienti: <span className="text-slate-300">{sale.customer_name || "I rastit"}</span> · Pagesa: <span className="text-slate-300">{(sale.payment_method || "").toUpperCase()}</span>
+              Klienti: <span className="text-slate-300">{sale.customer_name || "Qytetar"}</span> · Pagesa: <span className="text-slate-300">{(sale.payment_method || "").toUpperCase()}</span>
             </div>
 
             <div className="space-y-2">

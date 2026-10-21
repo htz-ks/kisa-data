@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog } from "@/components/ProductFormDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
@@ -37,6 +38,7 @@ export default function SaleEntryPage() {
   const [saving, setSaving] = useState(false);
   const [newForRow, setNewForRow] = useState(null);
   const [scanRow, setScanRow] = useState(null);
+  const [newCustomer, setNewCustomer] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -189,15 +191,23 @@ export default function SaleEntryPage() {
             <div className="md:col-span-6">
               <Label className={label}>Blerësi</Label>
               <div className="mt-1 flex gap-1">
-                <Select value={customerId || "none"} onValueChange={(v) => setCustomerId(v === "none" ? "" : v)}>
+                <Select value={customerId || "none"} onValueChange={(v) => {
+                  if (v === "__new__") { setNewCustomer(true); return; }
+                  setCustomerId(v === "none" ? "" : v);
+                }}>
                   <SelectTrigger className={`${field} flex-1`} data-testid="sale-buyer-select">
                     <SelectValue placeholder="Zgjidh blerësin" />
                   </SelectTrigger>
                   <SelectContent className="max-h-80">
-                    <SelectItem value="none">— Klient i rastit —</SelectItem>
+                    <SelectItem value="__new__" className="text-emerald-700 font-semibold" data-testid="sale-buyer-new-option">+ Shto klient të ri</SelectItem>
+                    <SelectItem value="none">— Qytetar —</SelectItem>
                     {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <Button variant="outline" className="h-9 px-3 border-emerald-500 text-emerald-700 hover:bg-emerald-50" onClick={() => setNewCustomer(true)}
+                  title="Shto klient të ri" data-testid="sale-add-customer-btn">
+                  <UserPlus className="w-4 h-4 mr-1" /> Shto klient
+                </Button>
                 <Button variant="outline" size="icon" className="h-9 w-9" onClick={load} title="Rifresko"><RefreshCw className="w-3.5 h-3.5" /></Button>
               </div>
             </div>
@@ -386,6 +396,8 @@ export default function SaleEntryPage() {
           </div>
         </div>
       </div>
+      <QuickCustomerDialog open={newCustomer} onOpenChange={setNewCustomer}
+        onCreated={async (c) => { const r = await api.get("/customers"); setCustomers(r.data); setCustomerId(c.id); }} />
       <ProductFormDialog open={newForRow !== null} onOpenChange={(o) => !o && setNewForRow(null)} onSaved={onProductCreated} />
       <BarcodeScanner open={scanRow !== null} onClose={() => setScanRow(null)}
         onDetected={(text) => { const i = scanRow; setScanRow(null); updateRow(i, { _barcode: text }); scanBarcode(i, text); }} />

@@ -816,7 +816,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
         [
             [Paragraph(f"<b>Nr. Faturës:</b> {sale.get('invoice_no','')}", body),
              Paragraph(f"<b>Data:</b> {sale.get('created_at','')[:19].replace('T',' ')}", body)],
-            [Paragraph(f"<b>Klienti:</b> {sale.get('customer_name') or 'Klient i rastit'}", body),
+            [Paragraph(f"<b>Klienti:</b> {sale.get('customer_name') or 'Qytetar'}", body),
              Paragraph(f"<b>Mënyra pagesës:</b> {sale.get('payment_method','').upper()}", body)],
         ],
         colWidths=[90 * mm, 90 * mm],
@@ -1218,7 +1218,7 @@ async def export_sales_csv(_a: dict = Depends(require_admin)):
         rows.append([
             s.get("invoice_no", ""),
             (s.get("created_at", "") or "")[:19].replace("T", " "),
-            s.get("customer_name", "") or "Klient i rastit",
+            s.get("customer_name", "") or "Qytetar",
             s.get("payment_method", "").upper(),
             f"{s.get('subtotal', 0):.2f}",
             f"{s.get('discount', 0):.2f}",

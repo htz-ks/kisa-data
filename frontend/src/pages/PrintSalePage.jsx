@@ -62,7 +62,7 @@ export default function PrintSalePage() {
         <div className="hr" />
         <div className="row"><span>Nr.</span><span className="b">{sale.invoice_no}</span></div>
         <div className="row"><span>Data</span><span>{dateStr}</span></div>
-        <div className="row"><span>Klienti</span><span>{sale.customer_name || "I rastit"}</span></div>
+        <div className="row"><span>Klienti</span><span>{sale.customer_name || "Qytetar"}</span></div>
         <div className="row"><span>Pagesa</span><span>{(sale.payment_method || "").toUpperCase()}</span></div>
         <div className="hr" />
         <table>
@@ -137,7 +137,7 @@ export default function PrintSalePage() {
         </div>
         <div style={{ marginTop: 14 }} className="box">
           <div style={{ fontSize: 11, color: "#64748B" }}>Klienti</div>
-          <div style={{ fontWeight: 600 }}>{sale.customer_name || "Klient i rastit"}</div>
+          <div style={{ fontWeight: 600 }}>{sale.customer_name || "Qytetar"}</div>
           <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>Shitësi: {sale.created_by_name || "—"}</div>
         </div>
         <table>

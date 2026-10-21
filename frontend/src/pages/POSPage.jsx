@@ -251,10 +251,10 @@ export default function POSPage() {
                 <Label className="text-xs">Klienti (opsionale)</Label>
                 <Select value={customerId || "none"} onValueChange={(v) => setCustomerId(v === "none" ? "" : v)}>
                   <SelectTrigger className="mt-1 bg-slate-900 border-slate-800 h-9" data-testid="pos-customer-select">
-                    <SelectValue placeholder="Klient i rastit" />
+                    <SelectValue placeholder="Qytetar" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— Klient i rastit —</SelectItem>
+                    <SelectItem value="none">— Qytetar —</SelectItem>
                     {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

@@ -140,7 +140,7 @@ export default function DashboardPage() {
               <div key={s.id} className="flex justify-between items-center p-3 rounded-lg bg-slate-900/40 border border-slate-800">
                 <div>
                   <div className="font-mono-pd text-emerald-400 text-sm">{s.invoice_no}</div>
-                  <div className="text-xs text-slate-500">{(s.created_at || "").slice(0, 16).replace("T", " ")} · {s.customer_name || "I rastit"}</div>
+                  <div className="text-xs text-slate-500">{(s.created_at || "").slice(0, 16).replace("T", " ")} · {s.customer_name || "Qytetar"}</div>
                 </div>
                 <div className="font-mono-pd font-semibold">{eur(s.total)}</div>
               </div>

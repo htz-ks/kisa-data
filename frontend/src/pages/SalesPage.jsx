@@ -58,7 +58,7 @@ export default function SalesPage() {
                   {s.status === "partial_return" && <Badge variant="outline" className="ml-2 border-amber-500/40 text-amber-300 text-[9px]">PJESËRISHT</Badge>}
                 </td>
                 <td className="px-4 py-3 font-mono-pd text-xs text-slate-400">{(s.created_at || "").slice(0, 16).replace("T", " ")}</td>
-                <td className="px-4 py-3">{s.customer_name || "Klient i rastit"}</td>
+                <td className="px-4 py-3">{s.customer_name || "Qytetar"}</td>
                 <td className="px-4 py-3">
                   <Badge variant="outline" className={
                     s.payment_method === "cash" ? "border-emerald-500/40 text-emerald-300" :
@@ -94,7 +94,7 @@ export default function SalesPage() {
           {view && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-slate-500">Klienti:</span> {view.customer_name || "Klient i rastit"}</div>
+                <div><span className="text-slate-500">Klienti:</span> {view.customer_name || "Qytetar"}</div>
                 <div><span className="text-slate-500">Data:</span> {(view.created_at || "").slice(0, 16).replace("T", " ")}</div>
                 <div><span className="text-slate-500">Shitësi:</span> {view.created_by_name || "—"}</div>
                 <div><span className="text-slate-500">Pagesa:</span> {view.payment_method?.toUpperCase()}</div>

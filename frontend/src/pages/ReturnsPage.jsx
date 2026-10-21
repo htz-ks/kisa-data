@@ -49,7 +49,7 @@ export default function ReturnsPage() {
               <tr key={r.id} className="border-b border-slate-800/50 hover:bg-slate-800/30" data-testid={`return-row-${r.id}`}>
                 <td className="px-4 py-3 font-mono-pd text-xs text-slate-400">{(r.created_at || "").slice(0, 16).replace("T", " ")}</td>
                 <td className="px-4 py-3 font-mono-pd text-emerald-400">{r.invoice_no}</td>
-                <td className="px-4 py-3">{r.customer_name || "Klient i rastit"}</td>
+                <td className="px-4 py-3">{r.customer_name || "Qytetar"}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {(r.items || []).map((it, i) => (
