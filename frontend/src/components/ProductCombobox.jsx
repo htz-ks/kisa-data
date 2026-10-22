@@ -3,7 +3,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Plus } from "lucide-react";
 
-// Type / scan directly (Enter = find by barcode, shifra, IMEI or name). The list opens only on mouse click.
+// Type / scan directly (Enter = find by barcode, shifra, IMEI or name). The list opens only from the arrow button.
 export const ProductCombobox = ({ products, value, onPick, onCreate, onEnter, testId }) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(null); // null = not typing, show selected name
@@ -27,11 +27,12 @@ export const ProductCombobox = ({ products, value, onPick, onCreate, onEnter, te
       <PopoverAnchor asChild>
         <div className="h-8 w-full flex items-center rounded-md border border-slate-300 bg-white text-sm hover:border-emerald-500 focus-within:border-emerald-500">
           <input value={text ?? (selected ? selected.name : "")} onChange={(e) => setText(e.target.value)} onKeyDown={onKeyDown}
-            onMouseDown={() => { if (!open) setTimeout(openList, 0); }} onBlur={() => !open && setText(null)}
+            onBlur={() => !open && setText(null)}
             placeholder="Shkruaj / skano produktin" data-testid={testId}
             className="flex-1 min-w-0 h-full bg-transparent px-2 outline-none text-slate-900 placeholder:text-slate-400" />
-          <button type="button" tabIndex={-1} onClick={openList} className="px-1.5 h-full" data-testid={`${testId}-open`}>
-            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+          <button type="button" tabIndex={-1} onClick={openList} title="Hap listën e produkteve"
+            className="px-2 h-full border-l border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700" data-testid={`${testId}-open`}>
+            <ChevronsUpDown className="w-4 h-4" />
           </button>
         </div>
       </PopoverAnchor>
