@@ -210,6 +210,7 @@ class PurchaseIn(BaseModel):
     items: List[PurchaseItem]
     paid_amount: float = 0.0
     notes: Optional[str] = ""
+    seller_name: Optional[str] = ""  # typed manually when not a saved supplier
 
 
 class SaleItem(BaseModel):
@@ -633,6 +634,8 @@ async def create_purchase(body: PurchaseIn, user: dict = Depends(require_admin))
     due = total - paid
     doc = {
         "supplier_id": body.supplier_id or None,
+        **({"seller_type": "citizen", "citizen": {"name": body.seller_name.strip()[:120], "phone": "", "personal_no": ""}}
+           if not body.supplier_id and (body.seller_name or "").strip() else {}),
         "items": enriched_items,
         "total": total,
         "paid_amount": paid,

@@ -26,6 +26,12 @@ export default function PurchasesPage() {
   const [open, setOpen] = useState(sp.get("new") === "1");
   useEffect(() => { if (sp.get("new")) setSp({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [supplierId, setSupplierId] = useState("");
+  const [sellerText, setSellerText] = useState("");
+  const onSellerType = (v) => {
+    setSellerText(v);
+    const s = suppliers.find((x) => (x.name || "").trim().toLowerCase() === v.trim().toLowerCase());
+    setSupplierId(s ? s.id : "");
+  };
   const [paid, setPaid] = useState(0);
   const [items, setItems] = useState([{ product_id: "", quantity: 1, cost_price: 0, imeis: [], imeiInput: "" }]);
   const [notes, setNotes] = useState("");
@@ -36,7 +42,7 @@ export default function PurchasesPage() {
   const onSupplierCreated = async (sup) => {
     const { data } = await api.get("/suppliers");
     setSuppliers(data);
-    setSupplierId(sup.id);
+    setSupplierId(sup.id); setSellerText(sup.name || "");
   };
   // new article goes straight into this purchase (first empty row, or a new row)
   const onProductCreated = async (prod, imeis = []) => {
@@ -71,6 +77,7 @@ export default function PurchasesPage() {
     try {
       const payload = {
         supplier_id: supplierId || "",
+        seller_name: supplierId ? "" : sellerText.trim(),
         items: items.filter((i) => i.product_id).map((i) => ({
           product_id: i.product_id,
           quantity: Number(i.quantity) || 1,
@@ -88,7 +95,7 @@ export default function PurchasesPage() {
       toast.success("Blerja u ruajt");
       setOpen(false);
       setItems([{ product_id: "", quantity: 1, cost_price: 0, imeis: [], imeiInput: "" }]);
-      setSupplierId(""); setPaid(0); setNotes("");
+      setSupplierId(""); setSellerText(""); setPaid(0); setNotes("");
       await load();
     } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
   };
@@ -138,13 +145,12 @@ export default function PurchasesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Furnitori</Label>
-                <Select value={supplierId || "none"} onValueChange={(v) => setSupplierId(v === "none" ? "" : v)}>
-                  <SelectTrigger className="mt-1 bg-slate-900 border-slate-800" data-testid="purchase-supplier-select"><SelectValue placeholder="Zgjidh" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Pa furnitor —</SelectItem>
-                    {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+<Input value={sellerText} onChange={(e) => onSellerType(e.target.value)} list="purchase-suppliers-list"
+                  placeholder="Shkruaj ose zgjidh furnitorin / prej kujt e bleve" className="mt-1 bg-slate-900 border-slate-800" data-testid="purchase-supplier-select" />
+                <datalist id="purchase-suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+                <div className="text-[11px] mt-1 text-slate-500" data-testid="purchase-seller-hint">
+                  {supplierId ? "Furnitor i regjistruar – borxhi shkon në kartelën e tij" : sellerText.trim() ? "Emër i shkruar manualisht (jo furnitor i regjistruar)" : "Pa furnitor"}
+                </div>
               </div>
               <div>
                 <Label>Paguar tani (€)</Label>
