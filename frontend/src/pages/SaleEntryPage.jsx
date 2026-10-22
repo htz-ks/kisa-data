@@ -125,6 +125,26 @@ export default function SaleEntryPage() {
     }
   };
 
+  // Enter in the product field: barcode / shifra / IMEI exact, else a unique name match
+  const findTyped = (i, q) => {
+    const l = q.toLowerCase();
+    let imei = "";
+    let prod = products.find((p) => (p.barcode || "").toLowerCase() === l || (p.code || "").toLowerCase() === l);
+    if (!prod) { prod = products.find((p) => (p.imeis || []).some((x) => x.imei === q && x.status === "in_stock")); if (prod) imei = q; }
+    if (!prod) {
+      const byName = products.filter((p) => (p.name || "").toLowerCase() === l);
+      const partial = byName.length ? byName : products.filter((p) => (p.name || "").toLowerCase().includes(l));
+      if (partial.length === 1) prod = partial[0];
+    }
+    if (!prod) return false;
+    applyProduct(i, prod, imei);
+    if (i === rows.length - 1) {
+      setRows((r) => [...r, emptyRow()]);
+      setTimeout(() => document.querySelector(`[data-testid="sale-product-${i + 1}"]`)?.focus(), 50);
+    }
+    return true;
+  };
+
   const onProductCreated = async (prod) => {
     const p = await api.get("/products");
     setProducts(p.data);
@@ -372,6 +392,7 @@ export default function SaleEntryPage() {
                       <td className="px-1 py-1">
 <ProductCombobox products={products} value={r.product_id} testId={`sale-product-${i}`}
                           onPick={(p) => applyProduct(i, p)}
+                          onEnter={(q) => findTyped(i, q)}
                           onCreate={isAdmin ? (name) => { setNewName(name); setNewForRow(i); } : null} />
                       </td>
                       <td className="px-1 py-1 text-right font-mono text-sm pr-2">

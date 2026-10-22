@@ -1,28 +1,43 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Plus } from "lucide-react";
 
-// Searchable product picker: type name / shifra / barcode, or create a new article from the typed text
-export const ProductCombobox = ({ products, value, onPick, onCreate, testId }) => {
+// Type / scan directly (Enter = find by barcode, shifra, IMEI or name). The list opens only on mouse click.
+export const ProductCombobox = ({ products, value, onPick, onCreate, onEnter, testId }) => {
   const [open, setOpen] = useState(false);
+  const [text, setText] = useState(null); // null = not typing, show selected name
   const [search, setSearch] = useState("");
   const selected = products.find((p) => p.id === value);
 
-  const choose = (p) => { onPick(p); setOpen(false); setSearch(""); };
+  const choose = (p) => { onPick(p); setOpen(false); setSearch(""); setText(null); };
+  const openList = () => { setSearch(text || ""); setOpen(true); };
+
+  const onKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = (text || "").trim();
+    if (!q) return;
+    if (onEnter(q)) setText(null);
+    else openList();
+  };
 
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
-      <PopoverTrigger asChild>
-        <button type="button" data-testid={testId}
-          className="h-8 w-full flex items-center justify-between rounded-md border border-slate-300 bg-white px-2 text-sm text-left hover:border-emerald-500">
-          <span className={`truncate ${selected ? "text-slate-900" : "text-slate-400"}`}>{selected ? selected.name : "Shkruaj ose zgjidh produktin"}</span>
-          <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="p-0 w-[420px]" align="start">
+      <PopoverAnchor asChild>
+        <div className="h-8 w-full flex items-center rounded-md border border-slate-300 bg-white text-sm hover:border-emerald-500 focus-within:border-emerald-500">
+          <input value={text ?? (selected ? selected.name : "")} onChange={(e) => setText(e.target.value)} onKeyDown={onKeyDown}
+            onMouseDown={() => { if (!open) setTimeout(openList, 0); }} onBlur={() => !open && setText(null)}
+            placeholder="Shkruaj / skano produktin" data-testid={testId}
+            className="flex-1 min-w-0 h-full bg-transparent px-2 outline-none text-slate-900 placeholder:text-slate-400" />
+          <button type="button" tabIndex={-1} onClick={openList} className="px-1.5 h-full" data-testid={`${testId}-open`}>
+            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent className="p-0 w-[420px]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
         <Command filter={(v, s) => (v.toLowerCase().includes(s.toLowerCase()) ? 1 : 0)}>
-          <CommandInput value={search} onValueChange={setSearch} placeholder="Shkruaj emrin, shifrën ose barkodin..." data-testid={`${testId}-search`} />
+          <CommandInput value={search} onValueChange={setSearch} placeholder="Kërko emrin, shifrën ose barkodin..." data-testid={`${testId}-search`} />
           <CommandList className="max-h-72">
             <CommandEmpty>Nuk u gjet asnjë produkt.</CommandEmpty>
             <CommandGroup>
@@ -37,7 +52,7 @@ export const ProductCombobox = ({ products, value, onPick, onCreate, testId }) =
             </CommandGroup>
           </CommandList>
           {onCreate && (
-            <button type="button" onClick={() => { onCreate(search.trim()); setOpen(false); setSearch(""); }}
+            <button type="button" onClick={() => { onCreate(search.trim()); setOpen(false); setSearch(""); setText(null); }}
               className="w-full flex items-center gap-2 px-3 py-2 border-t text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
               data-testid={`${testId}-create`}>
               <Plus className="w-4 h-4" /> {search.trim() ? `Krijo artikull: "${search.trim()}"` : "Krijo artikull të ri"}
