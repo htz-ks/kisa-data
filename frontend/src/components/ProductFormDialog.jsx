@@ -43,13 +43,17 @@ const PurchaseSourceFields = ({ src, setSrc, suppliers, citizens, total, paid, s
         {src.seller_type === "supplier" ? (
           <div>
             <Label>Furnitori</Label>
-            <Select value={src.supplier_id || "none"} onValueChange={(v) => setSrc({ ...src, supplier_id: v === "none" ? "" : v })}>
-              <SelectTrigger className={inp} data-testid="product-supplier-select"><SelectValue placeholder="Zgjidh furnitorin" /></SelectTrigger>
-              <SelectContent className="max-h-64">
-                <SelectItem value="none">— Pa furnitor —</SelectItem>
-                {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Input list="product-suppliers-list" value={src.supplier_text ?? (suppliers.find((s) => s.id === src.supplier_id)?.name || "")}
+              onChange={(e) => {
+                const v = e.target.value;
+                const m = suppliers.find((s) => (s.name || "").trim().toLowerCase() === v.trim().toLowerCase());
+                setSrc({ ...src, supplier_text: v, supplier_id: m ? m.id : "" });
+              }}
+              placeholder="Shkruaj ose zgjidh prej kujt e bleve" className={inp} data-testid="product-supplier-select" />
+            <datalist id="product-suppliers-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+            <div className="text-[11px] mt-1 text-slate-500" data-testid="product-seller-hint">
+              {src.supplier_id ? "Furnitor i regjistruar – borxhi shkon në kartelën e tij" : (src.supplier_text || "").trim() ? "Emër i shkruar manualisht (ruhet si qytetar)" : "Pa furnitor"}
+            </div>
           </div>
         ) : (
           <div>
@@ -157,7 +161,14 @@ export const ProductFormDialog = ({ open, onOpenChange, editId = null, initial =
         warranty_months: Number(form.warranty_months) || 0,
       };
       if (catalogOnly) { payload.quantity = 0; payload.imeis = []; }
-      else if (!editId) payload.purchase = { ...src, paid_amount: Number(paidValue) || 0 };
+      else if (!editId) {
+        const { supplier_text, ...rest } = src;
+        const typed = (supplier_text || "").trim();
+        // a typed name that is not a saved supplier is stored as the person we bought from
+        payload.purchase = rest.seller_type === "supplier" && !rest.supplier_id && typed
+          ? { ...rest, seller_type: "citizen", citizen_name: typed, paid_amount: Number(paidValue) || 0 }
+          : { ...rest, paid_amount: Number(paidValue) || 0 };
+      }
       let data;
       if (editId) {
         delete payload.imeis;
