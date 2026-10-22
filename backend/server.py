@@ -474,6 +474,15 @@ async def _unique_barcode() -> str:
             return code
 
 
+def avg_cost(old_cost, old_qty: int, new_cost, new_qty: int) -> float:
+    old_cost, new_cost = float(old_cost or 0), float(new_cost or 0)
+    if new_cost <= 0 or new_qty <= 0:
+        return old_cost
+    if old_cost <= 0 or old_qty <= 0:
+        return round(new_cost, 2)
+    return round((old_cost * old_qty + new_cost * new_qty) / (old_qty + new_qty), 2)
+
+
 @api.post("/products")
 async def create_product(body: ProductIn, user: dict = Depends(require_admin)):
     doc = body.model_dump()
@@ -611,23 +620,25 @@ async def create_purchase(body: PurchaseIn, user: dict = Depends(require_admin))
             "line_total": line_total,
             "imeis": it.imeis,
         })
-        # update stock
+        # update stock; cost becomes the weighted average of the stock on hand and this purchase
+        old_qty = max(0, int(prod.get("quantity", 0) or 0))
         if prod.get("type") == "phone":
             existing = prod.get("imeis", []) or []
             existing_set = {x["imei"] for x in existing}
             for imei in it.imeis:
                 if imei and imei not in existing_set:
                     existing.append({"imei": imei, "status": "in_stock"})
+            new_qty = len([x for x in existing if x["status"] == "in_stock"])
             await db.products.update_one(
                 {"_id": ObjectId(it.product_id)},
-                {"$set": {"imeis": existing, "quantity": len([x for x in existing if x["status"] == "in_stock"]),
-                          "cost_price": it.cost_price or prod.get("cost_price", 0)}},
+                {"$set": {"imeis": existing, "quantity": new_qty,
+                          "cost_price": avg_cost(prod.get("cost_price", 0), old_qty, it.cost_price, max(0, new_qty - old_qty))}},
             )
         else:
             new_qty = prod.get("quantity", 0) + it.quantity
             await db.products.update_one(
                 {"_id": ObjectId(it.product_id)},
-                {"$set": {"quantity": new_qty, "cost_price": it.cost_price or prod.get("cost_price", 0)}},
+                {"$set": {"quantity": new_qty, "cost_price": avg_cost(prod.get("cost_price", 0), old_qty, it.cost_price, it.quantity)}},
             )
 
     paid = max(0.0, body.paid_amount)
