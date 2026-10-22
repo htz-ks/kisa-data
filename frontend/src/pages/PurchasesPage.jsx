@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Truck, PackagePlus } from "lucide-react";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
-import { ProductFormDialog } from "@/components/ProductFormDialog";
+import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
+import { ProductCombobox, norm } from "@/components/ProductCombobox";
 import { toast } from "sonner";
 import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 
@@ -30,6 +31,7 @@ export default function PurchasesPage() {
   const [notes, setNotes] = useState("");
   const [newSupplier, setNewSupplier] = useState(false);
   const [newProduct, setNewProduct] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const onSupplierCreated = async (sup) => {
     const { data } = await api.get("/suppliers");
@@ -158,13 +160,19 @@ export default function PurchasesPage() {
                     <div className="grid grid-cols-12 gap-2 items-end">
                       <div className="col-span-5">
                         <Label className="text-xs">Produkti</Label>
-                        <Select value={it.product_id || "none"} onValueChange={(v) => updateRow(idx, { product_id: v === "none" ? "" : v, cost_price: products.find((p) => p.id === v)?.cost_price || 0 })}>
-                          <SelectTrigger className="mt-1 bg-slate-900 border-slate-800 h-9" data-testid={`purchase-item-product-${idx}`}><SelectValue placeholder="Zgjidh" /></SelectTrigger>
-                          <SelectContent className="max-h-64">
-                            <SelectItem value="none">—</SelectItem>
-                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.type})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-1">
+                          <ProductCombobox products={products} value={it.product_id} testId={`purchase-item-product-${idx}`}
+                            onPick={(p) => updateRow(idx, { product_id: p.id, cost_price: p.cost_price || 0 })}
+                            onEnter={(q) => {
+                              const l = q.toLowerCase();
+                              let p = products.find((x) => (x.barcode || "").toLowerCase() === l || (x.code || "").toLowerCase() === l);
+                              if (!p) { const m = products.filter((x) => norm(x.name).includes(norm(q))); if (m.length === 1) p = m[0]; }
+                              if (!p) return false;
+                              updateRow(idx, { product_id: p.id, cost_price: p.cost_price || 0 });
+                              return true;
+                            }}
+                            onCreate={(name) => { setNewName(name); setNewProduct(true); }} />
+                        </div>
                       </div>
                       <div className="col-span-2"><Label className="text-xs">Sasia</Label><Input type="number" value={it.quantity} onChange={(e) => updateRow(idx, { quantity: e.target.value })} className="mt-1 h-9 bg-slate-900 border-slate-800" disabled={prod?.type === "phone"} /></div>
                       <div className="col-span-3"><Label className="text-xs">Çmim blerje (€)</Label><Input type="number" step="0.01" value={it.cost_price} onChange={(e) => updateRow(idx, { cost_price: e.target.value })} className="mt-1 h-9 bg-slate-900 border-slate-800" /></div>
@@ -215,7 +223,8 @@ export default function PurchasesPage() {
         </DialogContent>
       </Dialog>
       <QuickCustomerDialog kind="supplier" open={newSupplier} onOpenChange={setNewSupplier} onCreated={onSupplierCreated} />
-      <ProductFormDialog catalogOnly open={newProduct} onOpenChange={setNewProduct} onSaved={onProductCreated} />
+      <ProductFormDialog catalogOnly open={newProduct} onOpenChange={(o) => { setNewProduct(o); if (!o) setNewName(""); }} onSaved={onProductCreated}
+        initial={newName ? { ...EMPTY_PRODUCT, name: newName } : undefined} />
     </div>
   );
 }

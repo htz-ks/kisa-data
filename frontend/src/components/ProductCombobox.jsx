@@ -3,6 +3,9 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Plus } from "lucide-react";
 
+export const norm = (x) => (x || "").toLowerCase().replace(/\s+/g, " ").trim();
+const matchAll = (v, s) => { const h = norm(v); return norm(s).split(" ").every((w) => h.includes(w)) ? 1 : 0; };
+
 // Type / scan directly (Enter = find by barcode, shifra, IMEI or name). The list opens only from the arrow button.
 export const ProductCombobox = ({ products, value, onPick, onCreate, onEnter, testId }) => {
   const [open, setOpen] = useState(false);
@@ -36,8 +39,8 @@ export const ProductCombobox = ({ products, value, onPick, onCreate, onEnter, te
           </button>
         </div>
       </PopoverAnchor>
-      <PopoverContent className="p-0 w-[420px]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <Command filter={(v, s) => (v.toLowerCase().includes(s.toLowerCase()) ? 1 : 0)}>
+      <PopoverContent className="p-0 w-[420px]" align="start">
+        <Command filter={matchAll}>
           <CommandInput value={search} onValueChange={setSearch} placeholder="Kërko emrin, shifrën ose barkodin..." data-testid={`${testId}-search`} />
           <CommandList className="max-h-72">
             <CommandEmpty>Nuk u gjet asnjë produkt.</CommandEmpty>

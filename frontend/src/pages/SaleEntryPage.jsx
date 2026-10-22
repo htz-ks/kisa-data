@@ -11,7 +11,7 @@ import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, Shopping
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
-import { ProductCombobox } from "@/components/ProductCombobox";
+import { ProductCombobox, norm } from "@/components/ProductCombobox";
 import { WarrantyPicker } from "@/components/WarrantyPicker";
 import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -132,8 +132,8 @@ export default function SaleEntryPage() {
     let prod = products.find((p) => (p.barcode || "").toLowerCase() === l || (p.code || "").toLowerCase() === l);
     if (!prod) { prod = products.find((p) => (p.imeis || []).some((x) => x.imei === q && x.status === "in_stock")); if (prod) imei = q; }
     if (!prod) {
-      const byName = products.filter((p) => (p.name || "").toLowerCase() === l);
-      const partial = byName.length ? byName : products.filter((p) => (p.name || "").toLowerCase().includes(l));
+      const byName = products.filter((p) => norm(p.name) === norm(q));
+      const partial = byName.length ? byName : products.filter((p) => norm(p.name).includes(norm(q)));
       if (partial.length === 1) prod = partial[0];
     }
     if (!prod) return false;
