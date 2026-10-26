@@ -20,7 +20,7 @@ const Row = ({ e, onEdit, onHistory, onDelete }) => (
     <td className="px-3 py-2 font-mono-pd whitespace-nowrap">{e.invoice_no || "—"}</td>
     <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap">{e.hyrje ? eur(e.hyrje) : ""}</td>
     <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap">{e.dalje ? eur(e.dalje) : ""}</td>
-    <td className="px-3 py-2">{e.method === "bank" ? "Bankë" : "Cash"}</td>
+    <td className="px-3 py-2 whitespace-nowrap">{e.method === "mixed" ? <span title={`Cash ${eur(e.cash_in)} + Bankë ${eur(e.bank_in)}`}>Cash + Bankë<div className="text-[10px] text-slate-500">{eur(e.cash_in)} + {eur(e.bank_in)}</div></span> : e.method === "bank" ? "Bankë" : "Cash"}</td>
     <td className={`px-3 py-2 text-right font-mono-pd font-semibold whitespace-nowrap ${e.profit > 0 ? "text-emerald-600" : e.profit < 0 ? "text-rose-600" : "text-slate-400"}`}>
       {e.cost_missing ? <span className="inline-flex items-center gap-1 text-amber-600" title="Mungon çmimi i blerjes"><AlertTriangle className="w-3.5 h-3.5" /> i paplotë</span> : e.profit ? eur(e.profit) : "—"}
     </td>

@@ -3,14 +3,24 @@ import api, { eur, formatApiErrorDetail } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Pencil, History, Printer, Trash2, Wrench } from "lucide-react";
+import { Plus, Search, Pencil, History, Printer, Trash2, Wrench, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { openPdf } from "@/components/DebtLedger";
+import { openPdf, waPhone } from "@/components/DebtLedger";
 import { ServiceFormDialog } from "@/components/service/ServiceFormDialog";
 import { DeliverDialog, ServiceHistoryDialog, STATUSES, statusOf } from "@/components/service/ServiceDialogs";
 
 const inp = "bg-slate-900 border-slate-800";
 const fmtDate = (d) => (d ? d.split("-").reverse().join(".") : "—");
+// opens WhatsApp with a ready-made "your phone is ready" message for the customer
+const notifyReady = (s) => {
+  const lines = [
+    `Përshëndetje ${s.first_name}${s.last_name ? " " + s.last_name : ""},`,
+    `Telefoni juaj ${s.device} (servisi ${s.number}) është gati për t'u marrë.`,
+    s.price != null ? `Çmimi i riparimit: ${Number(s.price).toFixed(2)} €.` : "",
+    "HIGH TECH ZONE SH.P.K. · Rr. Henri Dunan nr. 6 · 044 104 605",
+  ].filter(Boolean);
+  window.open(`https://wa.me/${waPhone(s.phone)}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank", "noopener");
+};
 
 export default function ServicesPage() {
   const [rows, setRows] = useState([]);
@@ -29,7 +39,11 @@ export default function ServicesPage() {
     try { await api.patch(`/services/${s.id}/status`, { status, paid_amount, paid_method }); toast.success(`Statusi: ${statusOf(status).l}`); load(); }
     catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail)); }
   };
-  const onStatus = (s, v) => (v === "delivered" ? setDeliver(s) : setStatus(s, v));
+  const onStatus = async (s, v) => {
+    if (v === "delivered") return setDeliver(s);
+    await setStatus(s, v);
+    if (v === "repaired" && window.confirm("Telefoni është gati. Ta njoftoj klientin në WhatsApp?")) notifyReady(s);
+  };
   const remove = async (s) => {
     if (!window.confirm(`Je i sigurt që do ta fshish servisin ${s.number} (${s.device})?`)) return;
     await api.delete(`/services/${s.id}`); toast.success("U fshi"); load();
@@ -105,6 +119,7 @@ export default function ServicesPage() {
                   <td className="px-2 py-2 whitespace-nowrap text-right">
                     <button onClick={() => setForm({ service: s })} className="p-1.5 text-slate-500 hover:text-emerald-600" title="Ndrysho" data-testid={`service-edit-${s.id}`}><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => setHistory(s)} className="p-1.5 text-slate-500 hover:text-sky-600" title="Historiku" data-testid={`service-history-${s.id}`}><History className="w-4 h-4" /></button>
+                    <button onClick={() => notifyReady(s)} className={`p-1.5 hover:text-green-600 ${s.status === "repaired" ? "text-green-600" : "text-slate-500"}`} title="Njofto klientin në WhatsApp që telefoni është gati" data-testid={`service-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></button>
                     <button onClick={() => openPdf(`/services/${s.id}/receipt.pdf`)} className="p-1.5 text-slate-500 hover:text-slate-900" title="Fletëpranimi A4" data-testid={`service-print-${s.id}`}><Printer className="w-4 h-4" /></button>
                     <button onClick={() => remove(s)} className="p-1.5 text-slate-500 hover:text-rose-600" title="Fshi" data-testid={`service-delete-${s.id}`}><Trash2 className="w-4 h-4" /></button>
                   </td>

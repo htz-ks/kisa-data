@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api, { eur } from "@/lib/api";
+import { PAY_LABELS } from "@/components/PaymentSplit";
 import { COMPANY } from "@/lib/company";
 
 /**
@@ -68,7 +69,7 @@ export default function PrintSalePage() {
         <div className="row"><span>Nr.</span><span className="b">{sale.invoice_no}</span></div>
         <div className="row"><span>Data</span><span>{dateStr}</span></div>
         <div className="row"><span>Klienti</span><span>{sale.customer_name || "Qytetar"}</span></div>
-        <div className="row"><span>Pagesa</span><span>{(sale.payment_method || "").toUpperCase()}</span></div>
+        <div className="row"><span>Pagesa</span><span>{PAY_LABELS[sale.payment_method] || (sale.payment_method || "").toUpperCase()}</span></div>
         <div className="hr" />
         <table>
           <thead>
@@ -93,8 +94,12 @@ export default function PrintSalePage() {
         <div className="hr" />
         <div className="row"><span>Nëntotali</span><span>€ {sale.subtotal.toFixed(2)}</span></div>
         <div className="row"><span>Zbritja</span><span>€ {sale.discount.toFixed(2)}</span></div>
+        {sale.card_surcharge > 0 && <div className="row"><span>Shtesë Card-Bank</span><span>€ {sale.card_surcharge.toFixed(2)}</span></div>}
         <div className="row b" style={{ fontSize: 13 }}><span>TOTALI</span><span>€ {sale.total.toFixed(2)}</span></div>
-        <div className="row"><span>Paguar</span><span>€ {sale.paid_amount.toFixed(2)}</span></div>
+        {sale.payment_method === "mixed" ? <>
+          <div className="row"><span>Paguar Cash</span><span>€ {sale.cash_paid.toFixed(2)}</span></div>
+          <div className="row"><span>Paguar Card-Bank</span><span>€ {sale.card_paid.toFixed(2)}</span></div>
+        </> : <div className="row"><span>Paguar</span><span>€ {sale.paid_amount.toFixed(2)}</span></div>}
         {sale.due_amount > 0 && <div className="row b"><span>Borxh</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         <div className="hr" />
         <div className="center" style={{ fontSize: 10 }}>Faleminderit për blerjen!</div>
@@ -150,7 +155,7 @@ export default function PrintSalePage() {
             <div style={{ fontSize: 13, color: "#64748B" }}>Nr. Faturës</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>{sale.invoice_no}</div>
             <div style={{ fontSize: 13, marginTop: 6, color: "#64748B" }}>Data: {dateStr}</div>
-            <div style={{ fontSize: 13, color: "#64748B" }}>Pagesa: {(sale.payment_method || "").toUpperCase()}</div>
+            <div style={{ fontSize: 13, color: "#64748B" }}>Pagesa: {PAY_LABELS[sale.payment_method] || (sale.payment_method || "").toUpperCase()}</div>
           </div>
         </div>
         <table>
@@ -180,8 +185,12 @@ export default function PrintSalePage() {
         <div className="totals">
           <div className="row"><span>Nëntotali</span><span>€ {sale.subtotal.toFixed(2)}</span></div>
           <div className="row"><span>Zbritja</span><span>€ {sale.discount.toFixed(2)}</span></div>
-          <div className="row big"><span>TOTALI</span><span>€ {sale.total.toFixed(2)}</span></div>
-          <div className="row"><span>Paguar</span><span>€ {sale.paid_amount.toFixed(2)}</span></div>
+          {sale.card_surcharge > 0 && <div className="row"><span>Shtesë pagesë Card-Bank</span><span>€ {sale.card_surcharge.toFixed(2)}</span></div>}
+          <div className="row big"><span>{sale.card_surcharge > 0 ? "TOTALI PËR PAGESË" : "TOTALI"}</span><span data-testid="print-total">€ {sale.total.toFixed(2)}</span></div>
+          {sale.payment_method === "mixed" ? <>
+            <div className="row"><span>Paguar Cash</span><span data-testid="print-cash-paid">€ {sale.cash_paid.toFixed(2)}</span></div>
+            <div className="row"><span>Paguar Card-Bank</span><span data-testid="print-card-paid">€ {sale.card_paid.toFixed(2)}</span></div>
+          </> : <div className="row"><span>Paguar</span><span>€ {sale.paid_amount.toFixed(2)}</span></div>}
           {sale.due_amount > 0 && <div className="row" style={{ color: "#D97706", fontWeight: 700 }}><span>Mbetur</span><span>€ {sale.due_amount.toFixed(2)}</span></div>}
         </div>
         {sale.warranty_terms && (

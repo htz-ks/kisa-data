@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from finance import get_rates
+
 TZ = ZoneInfo("Europe/Belgrade")
 DENOMS = ["500", "200", "100", "50", "20", "10", "5", "2", "1", "0.5", "0.2", "0.1"]
 OVERRIDABLE = ("hyrje", "dalje", "method", "description", "invoice_no", "cost")
@@ -104,11 +106,20 @@ def make_router(db, require_admin, now_utc, company_header):
             names = ", ".join(i.get("product_name", "") for i in items)
             cust = s.get("customer_name") or "Qytetar"
             pm = s.get("payment_method", "cash")
+            paid = r2(s.get("paid_amount"))
+            if "card_paid" in s:
+                cash_part, bank_part = r2(s.get("cash_paid")), r2(s.get("card_paid"))
+                if pm == "debt":
+                    cash_part = paid
+            else:  # sales saved before the Card-Bank update
+                cash_part, bank_part = (0.0, paid) if pm == "card" else (paid, 0.0)
             out.append({
                 "key": f"sale:{s['_id']}", "source": "sale", "source_id": str(s["_id"]), "date": d,
                 "time": s.get("created_at", ""), "type": "Shitje", "description": f"{names} · {cust}",
                 "invoice_no": s.get("invoice_no", ""), "hyrje": r2(s.get("paid_amount")), "dalje": 0.0,
-                "method": "bank" if pm == "card" else "cash", "revenue": r2(s.get("total")), "cost": r2(cost),
+                "method": "mixed" if cash_part and bank_part else ("bank" if bank_part else "cash"),
+                "cash_in": cash_part, "bank_in": bank_part, "vat": r2(s.get("vat")), "bank_fee": r2(s.get("bank_fee")),
+                "revenue": r2(s.get("total")), "cost": r2(cost),
                 "cost_missing": missing, "opex": 0.0, "value": r2(s.get("total")),
                 "note": "Me borxh" if pm == "debt" and float(s.get("due_amount") or 0) > 0 else "",
             })
@@ -208,36 +219,54 @@ def make_router(db, require_admin, now_utc, company_header):
                             e["cost"], e["cost_missing"] = r2(o["cost"]), False
                         else:
                             e[f] = r2(o[f]) if f in ("hyrje", "dalje") else o[f]
-            e["profit"] = r2(e["revenue"] - e["cost"] - e["opex"])
+            if o and (o.get("hyrje") is not None or o.get("method") is not None) or "cash_in" not in e:
+                # flows follow the (possibly corrected) amount and method
+                to_bank = e["method"] == "bank"
+                e["cash_in"], e["bank_in"] = (0.0, e["hyrje"]) if to_bank else (e["hyrje"], 0.0)
+                if e["method"] == "mixed":
+                    e["method"] = "cash"
+            e["cash_out"], e["bank_out"] = (0.0, e["dalje"]) if e["method"] == "bank" else (e["dalje"], 0.0)
+            e.setdefault("vat", 0.0)
+            e.setdefault("bank_fee", 0.0)
+            e["profit"] = r2(e["revenue"] - e["vat"] - e["cost"] - e["bank_fee"] - e["opex"])
         out.sort(key=lambda e: (e["date"], e["time"]))
         return out
 
     def cash_net(e) -> float:
-        return (e["hyrje"] - e["dalje"]) if e["method"] == "cash" else 0.0
+        return e["cash_in"] - e["cash_out"]
 
-    def summarize(entries: list) -> dict:
-        by = lambda src, field: r2(sum(e[field] for e in entries if e["source"] == src and e["method"] == "cash"))  # noqa: E731
+    def summarize(entries: list, tax_pct: float) -> dict:
+        by = lambda src, field: r2(sum(e["cash_in" if field == "hyrje" else "cash_out"] for e in entries if e["source"] == src))  # noqa: E731
+        sales = [e for e in entries if e["source"] == "sale"]
+        t_cash = r2(sum(e["cash_in"] for e in sales))
+        t_card = r2(sum(e["bank_in"] for e in sales))
+        vat = r2(sum(e["vat"] for e in entries))
+        fees = r2(sum(e["bank_fee"] for e in entries))
         revenue = r2(sum(e["revenue"] for e in entries if e["source"] in ("sale", "return")))
         cost = r2(sum(e["cost"] for e in entries if e["source"] in ("sale", "return")))
         service_rev = r2(sum(e["revenue"] for e in entries if e["source"] == "service"))
         service_cost = r2(sum(e["cost"] for e in entries if e["source"] == "service"))
         other_income = r2(sum(e["revenue"] for e in entries if e["source"] == "manual"))
         opex = r2(sum(e["opex"] for e in entries))
-        gross = r2(revenue - cost)
+        gross = r2(revenue - vat - cost)
+        pbt = r2(gross - fees + service_rev - service_cost + other_income - opex)
+        tax = r2(max(0.0, pbt) * tax_pct / 100)
         return {
+            "sales_count": len(sales), "turnover_cash": t_cash, "turnover_card": t_card, "turnover_total": r2(t_cash + t_card),
+            "vat": vat, "bank_fees": fees, "profit_before_tax": pbt, "profit_tax": tax, "profit_tax_pct": tax_pct,
             "cash_sales": by("sale", "hyrje"),
-            "debt_collections": r2(sum(e["hyrje"] for e in entries if e["type"] == "Arkëtim borxhi" and e["method"] == "cash")),
+            "debt_collections": r2(sum(e["cash_in"] for e in entries if e["type"] == "Arkëtim borxhi")),
             "manual_in": by("manual", "hyrje"),
             "service_cash": by("service", "hyrje"),
             "purchases_out": by("purchase", "dalje"),
             "expenses_out": by("expense", "dalje"),
-            "supplier_payments": r2(sum(e["dalje"] for e in entries if e["type"] == "Pagesë furnitori" and e["method"] == "cash")),
+            "supplier_payments": r2(sum(e["cash_out"] for e in entries if e["type"] == "Pagesë furnitori")),
             "returns_out": by("return", "dalje"),
             "manual_out": by("manual", "dalje"),
-            "cash_in": r2(sum(e["hyrje"] for e in entries if e["method"] == "cash")),
-            "cash_out": r2(sum(e["dalje"] for e in entries if e["method"] == "cash")),
-            "bank_in": r2(sum(e["hyrje"] for e in entries if e["method"] == "bank")),
-            "bank_out": r2(sum(e["dalje"] for e in entries if e["method"] == "bank")),
+            "cash_in": r2(sum(e["cash_in"] for e in entries)),
+            "cash_out": r2(sum(e["cash_out"] for e in entries)),
+            "bank_in": r2(sum(e["bank_in"] for e in entries)),
+            "bank_out": r2(sum(e["bank_out"] for e in entries)),
             "sales_total": r2(sum(e["revenue"] for e in entries if e["source"] == "sale")),
             "purchases_total": r2(sum(e["value"] for e in entries if e["source"] == "purchase")),
             "expenses_total": r2(sum(e["value"] for e in entries if e["source"] == "expense")),
@@ -245,7 +274,7 @@ def make_router(db, require_admin, now_utc, company_header):
             "revenue": revenue, "cogs": cost, "gross_profit": gross, "other_income": other_income, "opex": opex,
             "service_income": service_rev, "service_parts_cost": service_cost, "service_profit": r2(service_rev - service_cost),
             "service_delivered": sum(1 for e in entries if e["source"] == "service"),
-            "net_profit": r2(gross + service_rev - service_cost + other_income - opex),
+            "net_profit": r2(pbt - tax),
             "profit_incomplete": any(e["cost_missing"] for e in entries),
             "missing_cost_count": sum(1 for e in entries if e["cost_missing"]),
         }
@@ -268,7 +297,7 @@ def make_router(db, require_admin, now_utc, company_header):
         parse_day(date)
         st, start, entries, opening = await ledger(date, date)
         todays = [e for e in entries if e["date"] == date]
-        s = summarize(todays)
+        s = summarize(todays, (await get_rates(db))["profit_tax_pct"])
         closing = r2(opening + s["cash_in"] - s["cash_out"]) if opening is not None else None
         c = await db.cash_counts.find_one({"date": date})
         count = None
@@ -395,6 +424,7 @@ def make_router(db, require_admin, now_utc, company_header):
         if parse_day(d_from) > parse_day(d_to):
             raise HTTPException(400, "Data 'nga' duhet të jetë para datës 'deri'")
         st, start, entries, _ = await ledger(d_from, d_to)
+        tax_pct = (await get_rates(db))["profit_tax_pct"]
         counts = {c["date"]: count_total(c.get("counts", {})) async for c in db.cash_counts.find({"date": {"$gte": d_from, "$lte": d_to}})}
         by_day: dict = {}
         for e in entries:
@@ -419,11 +449,15 @@ def make_router(db, require_admin, now_utc, company_header):
             cur += timedelta(days=1)
         rows = []
         for g in groups.values():
-            s = summarize(g.pop("entries"))
+            s = summarize(g.pop("entries"), tax_pct)
             rows.append({**g, **s})
-        keys = ("sales_total", "service_income", "purchases_total", "expenses_total", "returns_total", "cash_in", "cash_out", "bank_in", "bank_out",
-                "revenue", "cogs", "gross_profit", "opex", "net_profit", "count_difference")
+        keys = ("sales_count", "turnover_cash", "turnover_card", "turnover_total", "sales_total", "service_income", "purchases_total",
+                "expenses_total", "returns_total", "cash_in", "cash_out", "bank_in", "bank_out", "revenue", "vat", "bank_fees", "cogs",
+                "gross_profit", "opex", "profit_before_tax", "count_difference")
         totals = {k: r2(sum(r[k] for r in rows)) for k in keys}
+        # profit tax on the whole period (losses of one day offset profits of another)
+        totals["profit_tax"] = r2(max(0.0, totals["profit_before_tax"]) * tax_pct / 100)
+        totals["net_profit"] = r2(totals["profit_before_tax"] - totals["profit_tax"])
         totals["profit_incomplete"] = any(r["profit_incomplete"] for r in rows)
         totals["cash_end"] = rows[-1]["cash_end"] if rows else None
         return rows, totals
@@ -433,10 +467,11 @@ def make_router(db, require_admin, now_utc, company_header):
         rows, totals = await report_rows(date_from, date_to, group)
         return {"rows": rows, "totals": totals}
 
-    COLS = [("period", "Periudha"), ("sales_total", "Shitjet"), ("purchases_total", "Blerjet"), ("expenses_total", "Shpenzimet"),
-            ("returns_total", "Kthimet"), ("service_income", "Servisi"), ("cash_in", "Hyrje Cash"), ("cash_out", "Dalje Cash"), ("bank_in", "Hyrje Bankë"),
-            ("bank_out", "Dalje Bankë"), ("gross_profit", "Fitimi bruto"), ("net_profit", "Fitimi neto"),
-            ("cash_end", "Arka në fund"), ("count_difference", "Diferenca numërimit")]
+    COLS = [("period", "Periudha"), ("sales_count", "Nr. shitjeve"), ("turnover_cash", "Qarkullimi Cash"), ("turnover_card", "Qarkullimi Card-Bank"),
+            ("turnover_total", "Qarkullimi total"), ("purchases_total", "Blerjet"), ("expenses_total", "Shpenzimet"), ("returns_total", "Kthimet"),
+            ("service_income", "Servisi"), ("bank_fees", "Komisione bankare"), ("vat", "TVSH"), ("cogs", "Kosto e mallit"),
+            ("profit_before_tax", "Fitimi para tatimit"), ("profit_tax", "Tatimi në fitim"), ("net_profit", "Fitimi i pastër"),
+            ("cash_in", "Hyrje Cash"), ("cash_out", "Dalje Cash"), ("cash_end", "Arka në fund"), ("count_difference", "Dif. numërimit")]
 
     @router.get("/report.xlsx")
     async def report_xlsx(date_from: str, date_to: str, group: Literal["day", "month", "year"] = "day", _a: dict = Depends(require_admin)):
@@ -459,9 +494,11 @@ def make_router(db, require_admin, now_utc, company_header):
             cell.font = Font(bold=True)
         for row in ws.iter_rows(min_row=3, min_col=2):
             for cell in row:
-                cell.number_format = '#,##0.00 "€"'
+                if cell.column != 2:
+                    cell.number_format = '#,##0.00 "€"'
+        from openpyxl.utils import get_column_letter
         for i in range(1, len(COLS) + 1):
-            ws.column_dimensions[chr(64 + i)].width = 16
+            ws.column_dimensions[get_column_letter(i)].width = 16
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
@@ -479,12 +516,17 @@ def make_router(db, require_admin, now_utc, company_header):
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=10 * mm, rightMargin=10 * mm, topMargin=10 * mm, bottomMargin=10 * mm)
         fmt = lambda v: "—" if v is None else (f"{v:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".") if isinstance(v, (int, float)) else str(v))  # noqa: E731
-        data = [[c[1] for c in COLS]] + [[fmt(r[k]) for k, _ in COLS] for r in rows] + [["TOTALI"] + [fmt(totals.get(k)) for k, _ in COLS[1:]]]
-        t = Table(data, repeatRows=1)
+        from reportlab.lib.styles import ParagraphStyle
+        hs = ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=6, leading=7, textColor=colors.white, alignment=1)
+        val = lambda k, v: str(int(v)) if k == "sales_count" and v is not None else fmt(v)  # noqa: E731
+        data = ([[Paragraph(c[1], hs) for c in COLS]] + [[val(k, r[k]) if k != "period" else r[k] for k, _ in COLS] for r in rows]
+                + [["TOTALI"] + [val(k, totals.get(k)) for k, _ in COLS[1:]]])
+        t = Table(data, repeatRows=1, colWidths=[18 * mm] + [(277 - 18) / (len(COLS) - 1) * mm] * (len(COLS) - 1))
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F766E")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 7.5), ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("FONTSIZE", (0, 0), (-1, -1), 6), ("ALIGN", (1, 0), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2),
             ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CBD5E1")),
             ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#F1F5F9")]),
             ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#E2E8F0")),

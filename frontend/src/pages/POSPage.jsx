@@ -14,6 +14,7 @@ import {
 import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download, ScanLine, MessageCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { useRates, computeSplit, PaymentBreakdown } from "@/components/PaymentSplit";
 import PrintMenu from "@/components/PrintMenu";
 
 export default function POSPage() {
@@ -23,6 +24,8 @@ export default function POSPage() {
   const [cart, setCart] = useState([]);
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [cashAmount, setCashAmount] = useState("");
+  const rates = useRates();
   const [paid, setPaid] = useState("");
   const [discount, setDiscount] = useState(0);
   const [imeiFor, setImeiFor] = useState(null); // product object
@@ -131,12 +134,14 @@ export default function POSPage() {
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.sale_price * i.quantity, 0), [cart]);
   const total = Math.max(0, subtotal - Number(discount || 0));
+  const split = computeSplit(total, paymentMethod, cashAmount, rates);
 
   const checkout = async () => {
     if (cart.length === 0) {
       toast.error("Shporta është bosh");
       return;
     }
+    if (!split.valid) { toast.error("Shuma Cash duhet të jetë më e madhe se 0 dhe më e vogël se çmimi normal"); return; }
     try {
       const payload = {
         customer_id: customerId || "",
@@ -147,15 +152,16 @@ export default function POSPage() {
           imei: i.imei || null,
         })),
         discount: Number(discount || 0),
-        paid_amount: paymentMethod === "debt" ? Number(paid || 0) : total,
+        paid_amount: paymentMethod === "debt" ? Number(paid || 0) : split.final,
         payment_method: paymentMethod,
+        cash_amount: paymentMethod === "mixed" ? split.cash : null,
       };
       const { data } = await api.post("/sales", payload);
       toast.success(`Fatura ${data.invoice_no} u krijua`);
       setDoneSale(data);
       setCart([]);
       setCustomerId("");
-      setPaid("");
+      setPaid(""); setCashAmount("");
       setDiscount(0);
       await load();
     } catch (e) {
@@ -273,12 +279,20 @@ export default function POSPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Kartë</SelectItem>
+                      <SelectItem value="card">Card-Bank (× {rates?.card_coef ?? 1.33})</SelectItem>
+                      <SelectItem value="mixed">Cash + Card-Bank</SelectItem>
                       <SelectItem value="debt">Kredi / Borxh</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+              {paymentMethod === "mixed" && (
+                <div>
+                  <Label className="text-xs">Shuma Cash €</Label>
+                  <Input type="number" step="0.01" min="0" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
+                    placeholder={`më pak se ${total.toFixed(2)}`} className="mt-1 h-9 bg-slate-900 border-slate-800" data-testid="pos-cash-amount-input" />
+                </div>
+              )}
               {paymentMethod === "debt" && (
                 <div>
                   <Label className="text-xs">Paguar tani € (pjesor)</Label>
@@ -290,7 +304,8 @@ export default function POSPage() {
               <div className="space-y-1 border-t border-slate-800 pt-3">
                 <div className="flex justify-between text-xs text-slate-400"><span>Nëntotali</span><span className="font-mono-pd">{eur(subtotal)}</span></div>
                 <div className="flex justify-between text-xs text-slate-400"><span>Zbritja</span><span className="font-mono-pd">-{eur(discount)}</span></div>
-                <div className="flex justify-between text-base font-bold pt-1"><span>TOTALI</span><span className="text-emerald-400 font-mono-pd" data-testid="pos-total">{eur(total)}</span></div>
+                <div className="flex justify-between text-base font-bold pt-1"><span>TOTALI</span><span className="text-emerald-400 font-mono-pd" data-testid="pos-total">{eur(split.final)}</span></div>
+                <PaymentBreakdown split={split} method={paymentMethod} rates={rates} prefix="pos" />
               </div>
 
               <Button onClick={checkout} disabled={cart.length === 0}

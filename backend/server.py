@@ -11,6 +11,7 @@ import secrets
 import hmac
 from dateutil.relativedelta import relativedelta
 from zoneinfo import ZoneInfo
+from finance import get_rates, split_payment
 import fitz
 from PIL import Image, ImageOps
 import hashlib
@@ -225,7 +226,8 @@ class SaleIn(BaseModel):
     items: List[SaleItem]
     discount: float = 0.0
     paid_amount: float = 0.0
-    payment_method: Literal["cash", "card", "debt"] = "cash"
+    payment_method: Literal["cash", "card", "mixed", "debt"] = "cash"
+    cash_amount: Optional[float] = None  # cash part of a mixed payment
     notes: Optional[str] = ""
     document_date: Optional[str] = None
     due_date: Optional[str] = None
@@ -773,6 +775,11 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
             **warranty_info,
         })
 
+    discount = max(0.0, body.discount or 0.0)
+    normal_total = round(max(0.0, subtotal - discount), 2)
+    rates = await get_rates(db)
+    split = split_payment(normal_total, body.payment_method, body.cash_amount, rates)
+
     # phase 2: apply stock changes
     for pid, prod in cache.items():
         if prod.get("type") == "phone":
@@ -781,13 +788,12 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
         else:
             await db.products.update_one({"_id": ObjectId(pid)}, {"$inc": {"quantity": -accessory_need[pid]}})
 
-    discount = max(0.0, body.discount or 0.0)
-    total = max(0.0, subtotal - discount)
-
+    total = split["final_total"]
     if body.payment_method == "debt":
-        paid = body.paid_amount
+        paid = max(0.0, min(body.paid_amount, total))
+        split["cash_paid"] = round(paid, 2)
     else:
-        paid = total  # cash/card = paid in full
+        paid = total  # cash/card/mixed = paid in full
 
     due = max(0.0, total - paid)
 
@@ -810,6 +816,11 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
         "paid_amount": paid,
         "due_amount": due,
         "payment_method": body.payment_method,
+        # payment split + rates used at the moment of the sale (later setting changes do not touch it)
+        "normal_total": normal_total,
+        "cash_paid": split["cash_paid"], "card_normal": split["card_normal"], "card_paid": split["card_paid"],
+        "card_surcharge": round(total - normal_total, 2), "bank_fee": split["bank_fee"], "vat": split["vat"],
+        "rates": rates,
         "document_date": body.document_date,
         "due_date": body.due_date,
         "notes": body.notes,
@@ -837,6 +848,7 @@ COMPANY = {
     "name": "HIGH TECH ZONE SH.P.K.", "address": "Rr. Henri Dunan nr. 6", "nui": "811313620",
     "phone": "044 104 605", "email": "htz.ks@hotmail.com",
 }
+PAY_LABELS = {"cash": "CASH", "card": "CARD-BANK", "mixed": "CASH + CARD-BANK", "debt": "KREDI / BORXH"}
 LOGO_PATH = ROOT_DIR / "assets" / "htz-logo.png"
 
 
@@ -872,7 +884,7 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
             [Paragraph(f"<b>Nr. Faturës:</b> {sale.get('invoice_no','')}", body),
              Paragraph(f"<b>Data:</b> {sale.get('created_at','')[:19].replace('T',' ')}", body)],
             [Paragraph(f"<b>Klienti:</b> {sale.get('customer_name') or 'Qytetar'}", body),
-             Paragraph(f"<b>Mënyra pagesës:</b> {sale.get('payment_method','').upper()}", body)],
+             Paragraph(f"<b>Mënyra pagesës:</b> {PAY_LABELS.get(sale.get('payment_method', ''), sale.get('payment_method', '').upper())}", body)],
         ],
         colWidths=[90 * mm, 90 * mm],
     )
@@ -922,17 +934,23 @@ async def invoice_pdf(sid: str, _u: dict = Depends(get_current_user)):
     totals = [
         ["Nëntotali:", f"€ {sale.get('subtotal', 0):.2f}"],
         ["Zbritja:", f"€ {sale.get('discount', 0):.2f}"],
-        ["TOTALI:", f"€ {sale.get('total', 0):.2f}"],
-        ["Paguar:", f"€ {sale.get('paid_amount', 0):.2f}"],
-        ["Borxh në faturë:", f"€ {sale.get('due_amount', 0):.2f}"],
     ]
-    tot_tbl = Table(totals, colWidths=[40 * mm, 40 * mm], hAlign="RIGHT")
+    if sale.get("card_surcharge"):
+        totals.append(["Shtesë pagesë Card-Bank:", f"€ {sale['card_surcharge']:.2f}"])
+    ti = len(totals)
+    totals.append(["TOTALI PËR PAGESË:" if sale.get("card_surcharge") else "TOTALI:", f"€ {sale.get('total', 0):.2f}"])
+    if sale.get("payment_method") == "mixed":
+        totals += [["Paguar Cash:", f"€ {sale.get('cash_paid', 0):.2f}"], ["Paguar Card-Bank:", f"€ {sale.get('card_paid', 0):.2f}"]]
+    else:
+        totals.append(["Paguar:", f"€ {sale.get('paid_amount', 0):.2f}"])
+    totals.append(["Borxh në faturë:", f"€ {sale.get('due_amount', 0):.2f}"])
+    tot_tbl = Table(totals, colWidths=[48 * mm, 40 * mm], hAlign="RIGHT")
     tot_tbl.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-        ("TEXTCOLOR", (0, 2), (-1, 2), colors.HexColor("#10B981")),
-        ("LINEABOVE", (0, 2), (-1, 2), 0.5, colors.HexColor("#233044")),
+        ("FONTNAME", (0, ti), (-1, ti), "Helvetica-Bold"),
+        ("TEXTCOLOR", (0, ti), (-1, ti), colors.HexColor("#10B981")),
+        ("LINEABOVE", (0, ti), (-1, ti), 0.5, colors.HexColor("#233044")),
     ]))
     story.append(tot_tbl)
 
@@ -1281,7 +1299,7 @@ async def export_sales_csv(_a: dict = Depends(require_admin)):
             s.get("invoice_no", ""),
             (s.get("created_at", "") or "")[:19].replace("T", " "),
             s.get("customer_name", "") or "Qytetar",
-            s.get("payment_method", "").upper(),
+            PAY_LABELS.get(s.get("payment_method", ""), s.get("payment_method", "").upper()),
             f"{s.get('subtotal', 0):.2f}",
             f"{s.get('discount', 0):.2f}",
             f"{s.get('total', 0):.2f}",
@@ -1807,6 +1825,8 @@ async def shutdown():
     client.close()
 
 
+from finance import make_router as make_finance_router  # noqa: E402
+api.include_router(make_finance_router(db, get_current_user, require_admin))
 from daybook import make_router as make_daybook_router  # noqa: E402
 api.include_router(make_daybook_router(db, require_admin, now_utc, _company_header))
 from services import make_router as make_services_router  # noqa: E402

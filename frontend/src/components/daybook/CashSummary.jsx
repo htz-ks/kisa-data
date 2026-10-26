@@ -48,7 +48,7 @@ export const CashSummary = ({ data, onChange }) => {
       {!data.settings.set && <div className="text-xs text-amber-600 mb-2">Vendos arkën fillestare që gjendja të bartet saktë nga dita në ditë.</div>}
       {data.before_start && <div className="text-xs text-amber-600 mb-2">Kjo datë është para fillimit të llogaritjes së arkës ({data.settings.start_date}).</div>}
       <Line n={1} label="Arka në fillim të ditës" value={data.opening_cash} tid="cash-opening" />
-      <Line n={2} label="Të hyrat nga shitjet Cash" value={s.cash_sales} sign="+" tid="cash-sales" />
+      <Line n={2} label="Të hyrat nga shitjet Cash (pa Card-Bank)" value={s.cash_sales} sign="+" tid="cash-sales" />
       <Line n={3} label="Arkëtimet e borxheve" value={s.debt_collections} sign="+" tid="cash-collections" />
       {s.service_cash > 0 && <Line n="•" label="Arkëtime nga servisi" value={s.service_cash} sign="+" tid="cash-service" />}
       {s.manual_in > 0 && <Line n="•" label="Hyrje të tjera (manuale)" value={s.manual_in} sign="+" tid="cash-manual-in" />}
@@ -60,31 +60,40 @@ export const CashSummary = ({ data, onChange }) => {
       <Line n={7} label="Arka në fund të ditës" value={data.closing_cash} strong tid="cash-closing" />
       <Line n={8} label="Paratë e numëruara fizikisht" value={counted ?? null} tid="cash-counted" />
       <div className="flex justify-between py-1.5"><span><span className="text-slate-400 mr-2 font-mono-pd">9.</span>Diferenca e arkës</span><span data-testid="cash-difference"><DiffBadge diff={data.count?.difference} /></span></div>
-      <div className="mt-2 text-[11px] text-slate-500">Banka (e ndarë nga arka): hyrje {eur(s.bank_in)} · dalje {eur(s.bank_out)}</div>
+      <div className="mt-2 text-[11px] text-slate-500">Card-Bank (nuk hyn në arkë): hyrje {eur(s.bank_in)} · dalje {eur(s.bank_out)}</div>
       <OpeningDialog key={String(open)} open={open} settings={data.settings} date={data.date} onClose={() => setOpen(false)} onSaved={onChange} />
     </div>
   );
 };
+
+const PLine = ({ l, v, b, tid, cls = "" }) => (
+  <div className={`flex justify-between py-1.5 border-b border-slate-800/40 ${b ? "font-bold" : ""} ${cls}`}><span>{l}</span><span className="font-mono-pd" data-testid={tid}>{eur(v)}</span></div>
+);
 
 export const ProfitBox = ({ s }) => {
   const net = s.net_profit;
   return (
     <div className="stat-card p-4" data-testid="profit-box">
       <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-5 h-5 text-emerald-600" /><h2 className="font-extrabold text-lg">Fitimi ose Humbja e Ditës</h2></div>
-      {[["Të ardhurat nga shitjet (pa kthimet)", s.revenue], ["Kostoja e produkteve të shitura", -s.cogs], ["Fitimi bruto", s.gross_profit, true], ["Shpenzimet operative", -s.opex]].map(([l, v, b]) => (
-        <div key={l} className={`flex justify-between py-1.5 border-b border-slate-800/40 ${b ? "font-bold" : ""}`}><span>{l}</span><span className="font-mono-pd">{eur(v)}</span></div>
-      ))}
-      {(s.service_income > 0 || s.service_parts_cost > 0) && <div className="flex justify-between py-1.5 border-b border-slate-800/40" data-testid="profit-service"><span>Fitimi nga servisi ({eur(s.service_income)} − pjesët {eur(s.service_parts_cost)})</span><span className="font-mono-pd">{eur(s.service_profit)}</span></div>}
-      {s.other_income > 0 && <div className="flex justify-between py-1.5 border-b border-slate-800/40"><span>Të ardhura të tjera</span><span className="font-mono-pd">{eur(s.other_income)}</span></div>}
+      <PLine l={`Të ardhurat nga shitjet (${s.sales_count} shitje, pa kthimet)`} v={s.revenue} tid="profit-revenue" />
+      {s.vat > 0 && <PLine l="TVSH e përfshirë (Card-Bank / e kombinuar)" v={-s.vat} tid="profit-vat" />}
+      <PLine l="Kostoja e produkteve të shitura" v={-s.cogs} tid="profit-cogs" />
+      <PLine l="Fitimi bruto" v={s.gross_profit} b tid="profit-gross" />
+      {s.bank_fees > 0 && <PLine l="Komisione bankare" v={-s.bank_fees} tid="profit-bank-fees" />}
+      {(s.service_income > 0 || s.service_parts_cost > 0) && <PLine l={`Fitimi nga servisi (${eur(s.service_income)} − pjesët ${eur(s.service_parts_cost)})`} v={s.service_profit} tid="profit-service" />}
+      {s.other_income > 0 && <PLine l="Të ardhura të tjera" v={s.other_income} />}
+      <PLine l="Shpenzimet operative" v={-s.opex} tid="profit-opex" />
+      <PLine l="Fitimi para tatimit" v={s.profit_before_tax} b tid="profit-before-tax" />
+      <PLine l={`Tatimi në fitim ${s.profit_tax_pct}%`} v={-s.profit_tax} tid="profit-tax" />
       <div className={`flex justify-between pt-3 text-xl font-extrabold ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-        <span>{net >= 0 ? "Fitimi neto" : "Humbja neto"}</span><span className="font-mono-pd" data-testid="profit-net">{eur(net)}</span>
+        <span>{net >= 0 ? "Fitimi i pastër" : "Humbja"}</span><span className="font-mono-pd" data-testid="profit-net">{eur(net)}</span>
       </div>
       {s.profit_incomplete && (
         <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-600" data-testid="profit-incomplete">
           <AlertTriangle className="w-4 h-4 shrink-0" /> Fitimi është i paplotë: {s.missing_cost_count} shitje kanë produkte pa çmim blerjeje. Plotësoje te "Korrigjo".
         </div>
       )}
-      <div className="text-[11px] text-slate-500 mt-2">Blerja e mallit për stok dhe pagesat e borxheve nuk llogariten si humbje/fitim.</div>
+      <div className="text-[11px] text-slate-500 mt-2">Blerja e mallit për stok dhe pagesat e borxheve nuk llogariten si humbje/fitim. Tatimi llogaritet mbi fitimin total të periudhës, vetëm kur është pozitiv.</div>
     </div>
   );
 };

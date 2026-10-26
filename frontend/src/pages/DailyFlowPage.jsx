@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { eur } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Receipt, ArrowDownCircle, ArrowUpCircle, Wallet, TrendingUp, Scale, ArrowLeft } from "lucide-react";
+import { Receipt, ArrowDownCircle, ArrowUpCircle, Wallet, TrendingUp, Scale, ArrowLeft, Banknote, CreditCard } from "lucide-react";
 import { DayPicker } from "@/components/daybook/DayPicker";
 import { FlowTable } from "@/components/daybook/FlowTable";
 import { CashCount } from "@/components/daybook/CashCount";
 import { CashSummary, ProfitBox } from "@/components/daybook/CashSummary";
 import { Reports } from "@/components/daybook/Reports";
 import { ServicesBox } from "@/components/daybook/ServicesBox";
+import { RatesButton } from "@/components/daybook/RatesDialog";
 import { MONTHS, todayLocal } from "@/components/daybook/util";
 
 const Card = ({ icon: Icon, label, value, tone = "text-slate-900", tid }) => (
@@ -35,16 +36,21 @@ export default function DailyFlowPage() {
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Qarkullimet Ditore</h1>
           <p className="text-sm text-slate-500 mt-1" data-testid="daybook-selected-date">Shitje Vendore · {Number(d)} {MONTHS[Number(m) - 1]} {y}</p>
         </div>
+        <div className="flex gap-2">
+        <RatesButton onSaved={load} />
         <Button variant="outline" onClick={() => navigate("/sale/new")} data-testid="daybook-back-to-sale"><ArrowLeft className="w-4 h-4 mr-1" /> Shitja vendore</Button>
+        </div>
       </div>
 
       {data && (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          <Card icon={Receipt} label="Qarkullimi i Ditës" value={eur(data.turnover)} tid="card-turnover" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card icon={Receipt} label="Qarkullimi total" value={eur(s.turnover_total)} tid="card-turnover" />
+          <Card icon={Banknote} label="Qarkullimi Cash" value={eur(s.turnover_cash)} tid="card-turnover-cash" />
+          <Card icon={CreditCard} label="Qarkullimi Card-Bank" value={eur(s.turnover_card)} tone="text-sky-700" tid="card-turnover-card" />
           <Card icon={ArrowDownCircle} label="Të Hyrat Cash" value={eur(s.cash_in)} tone="text-emerald-600" tid="card-cash-in" />
           <Card icon={ArrowUpCircle} label="Daljet Cash" value={eur(s.cash_out)} tone="text-rose-600" tid="card-cash-out" />
           <Card icon={Wallet} label="Gjendja e Arkës" value={data.closing_cash == null ? "—" : eur(data.closing_cash)} tid="card-cash-balance" />
-          <Card icon={TrendingUp} label="Fitimi/Humbja Ditore" value={`${eur(s.net_profit)}${s.profit_incomplete ? " *" : ""}`} tone={s.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"} tid="card-profit" />
+          <Card icon={TrendingUp} label="Fitimi i pastër ditor" value={`${eur(s.net_profit)}${s.profit_incomplete ? " *" : ""}`} tone={s.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"} tid="card-profit" />
           <Card icon={Scale} label="Diferenca e Arkës" value={diff == null ? "—" : eur(diff)} tone={diff == null || Math.abs(diff) < 0.005 ? "text-slate-900" : diff < 0 ? "text-rose-600" : "text-amber-600"} tid="card-cash-diff" />
         </div>
       )}

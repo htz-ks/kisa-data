@@ -9,11 +9,13 @@ import { toast } from "sonner";
 import { openPdf } from "@/components/DebtLedger";
 import { download, inp, MONTHS } from "./util";
 
-const COLS = [["sales_total", "Shitjet"], ["purchases_total", "Blerjet"], ["expenses_total", "Shpenzimet"], ["returns_total", "Kthimet"], ["service_income", "Servisi"],
-  ["cash_in", "Hyrje Cash"], ["cash_out", "Dalje Cash"], ["gross_profit", "Fitimi bruto"], ["net_profit", "Fitimi neto"],
-  ["cash_end", "Arka në fund"], ["count_difference", "Dif. numërimit"]];
+const COLS = [["sales_count", "Nr. shitjeve"], ["turnover_cash", "Qark. Cash"], ["turnover_card", "Qark. Card-Bank"], ["turnover_total", "Qark. total"],
+  ["purchases_total", "Blerjet"], ["expenses_total", "Shpenzimet"], ["returns_total", "Kthimet"], ["service_income", "Servisi"],
+  ["bank_fees", "Komisione"], ["vat", "TVSH"], ["cogs", "Kosto"], ["profit_before_tax", "Fitimi para tatimit"], ["profit_tax", "Tatimi"],
+  ["net_profit", "Fitimi i pastër"], ["cash_in", "Hyrje Cash"], ["cash_out", "Dalje Cash"], ["cash_end", "Arka në fund"], ["count_difference", "Dif. numërimit"]];
+const cell = (k, v) => (v == null ? "—" : k === "sales_count" ? v : eur(v));
 const period = (p) => (p.length === 10 ? p.split("-").reverse().join(".") : p.length === 7 ? `${MONTHS[Number(p.slice(5)) - 1]} ${p.slice(0, 4)}` : p);
-const color = (k, v) => (["net_profit", "gross_profit", "count_difference"].includes(k) && v ? (v > 0 ? "text-emerald-600" : "text-rose-600") : "");
+const color = (k, v) => (["net_profit", "gross_profit", "profit_before_tax", "count_difference"].includes(k) && v ? (v > 0 ? "text-emerald-600" : "text-rose-600") : "");
 
 export const Reports = ({ date }) => {
   const [f, setF] = useState({ date_from: `${date.slice(0, 8)}01`, date_to: date, group: "day" });
@@ -56,12 +58,12 @@ export const Reports = ({ date }) => {
               {data.rows.map((r) => (
                 <tr key={r.period} className="border-b border-slate-800/40">
                   <td className="px-2 py-1.5 font-mono-pd whitespace-nowrap">{period(r.period)}{r.profit_incomplete && <span className="text-amber-600" title="Fitim i paplotë"> *</span>}</td>
-                  {COLS.map(([k]) => <td key={k} className={`px-2 py-1.5 text-right font-mono-pd ${color(k, r[k])}`}>{r[k] == null ? "—" : eur(r[k])}</td>)}
+                  {COLS.map(([k]) => <td key={k} className={`px-2 py-1.5 text-right font-mono-pd whitespace-nowrap ${color(k, r[k])}`}>{cell(k, r[k])}</td>)}
                 </tr>
               ))}
             </tbody>
             <tfoot className="font-bold border-t-2 border-slate-700">
-              <tr><td className="px-2 py-2">TOTALI</td>{COLS.map(([k]) => <td key={k} className={`px-2 py-2 text-right font-mono-pd ${color(k, data.totals[k])}`} data-testid={`report-total-${k}`}>{data.totals[k] == null ? "—" : eur(data.totals[k])}</td>)}</tr>
+              <tr><td className="px-2 py-2">TOTALI</td>{COLS.map(([k]) => <td key={k} className={`px-2 py-2 text-right font-mono-pd ${color(k, data.totals[k])}`} data-testid={`report-total-${k}`}>{cell(k, data.totals[k])}</td>)}</tr>
             </tfoot>
           </table>
           {data.totals.profit_incomplete && <div className="text-xs text-amber-600 mt-2">* Fitimi është i paplotë: mungon çmimi i blerjes për disa produkte.</div>}

@@ -15,6 +15,7 @@ import { ProductCombobox, norm } from "@/components/ProductCombobox";
 import { WarrantyPicker } from "@/components/WarrantyPicker";
 import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { useRates, computeSplit, PaymentBreakdown } from "@/components/PaymentSplit";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
 export const DRAFT_KEY = "sale-draft";
@@ -37,6 +38,8 @@ export default function SaleEntryPage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [priceMode, setPriceMode] = useState("retail"); // retail | wholesale
   const [paid, setPaid] = useState("");
+  const [cashAmount, setCashAmount] = useState("");
+  const rates = useRates();
   const [rows, setRows] = useState([emptyRow()]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,10 +68,10 @@ export default function SaleEntryPage() {
     window.dispatchEvent(new Event("sale-draft"));
     const d = JSON.parse(raw);
     setCustomerId(d.customerId); setDocDate(d.docDate); setDueDate(d.dueDate); setPaymentMethod(d.paymentMethod);
-    setPriceMode(d.priceMode); setPaid(d.paid); setRows(d.rows); setNotes(d.notes); setWarranty(d.warranty);
+    setPriceMode(d.priceMode); setPaid(d.paid); setRows(d.rows); setNotes(d.notes); setWarranty(d.warranty); setCashAmount(d.cashAmount || "");
   }, []);
   const goTo = (path) => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ customerId, docDate, dueDate, paymentMethod, priceMode, paid, rows, notes, warranty }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ customerId, docDate, dueDate, paymentMethod, priceMode, paid, rows, notes, warranty, cashAmount }));
     window.dispatchEvent(new Event("sale-draft"));
     navigate(path);
   };
@@ -167,6 +170,7 @@ export default function SaleEntryPage() {
   const lineTotal = (r) => (Number(r.sale_price) || 0) * (Number(r.quantity) || 0) - (Number(r.discount) || 0);
   const subtotal = useMemo(() => rows.reduce((s, r) => s + lineTotal(r), 0), [rows]);
   const total = subtotal;
+  const split = computeSplit(total, paymentMethod, cashAmount, rates);
 
   const save = async (print = false) => {
     const items = rows.filter((r) => r.product_id).map((r) => ({
@@ -183,14 +187,16 @@ export default function SaleEntryPage() {
     const dup = imeiList.find((x, k) => imeiList.indexOf(x) !== k);
     if (dup) { toast.error(`IMEI ${dup} është vendosur dy herë`); return; }
     const totalDiscount = rows.reduce((s, r) => s + (Number(r.discount) || 0), 0);
+    if (!split.valid) { toast.error("Shuma Cash duhet të jetë më e madhe se 0 dhe më e vogël se çmimi normal"); return; }
     setSaving(true);
     try {
       const payload = {
         customer_id: customerId || "",
         items,
         discount: totalDiscount,
-        paid_amount: paymentMethod === "debt" ? Number(paid || 0) : total,
+        paid_amount: paymentMethod === "debt" ? Number(paid || 0) : split.final,
         payment_method: paymentMethod,
+        cash_amount: paymentMethod === "mixed" ? split.cash : null,
         document_date: docDate,
         due_date: dueDate,
         notes,
@@ -315,11 +321,20 @@ export default function SaleEntryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Kartë</SelectItem>
+                  <SelectItem value="card">Card-Bank (× {rates?.card_coef ?? 1.33})</SelectItem>
+                  <SelectItem value="mixed">Cash + Card-Bank (e kombinuar)</SelectItem>
                   <SelectItem value="debt">Kredi / Borxh</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {paymentMethod === "mixed" && (
+              <div className="md:col-span-3">
+                <Label className={label}>Shuma Cash (€)</Label>
+                <Input type="number" step="0.01" min="0" max={total} value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
+                  className={field + " mt-1" + (cashAmount !== "" && !split.valid ? " border-red-500" : "")} placeholder={`më pak se ${total.toFixed(2)}`} data-testid="sale-cash-amount-input" />
+                {cashAmount !== "" && !split.valid && <div className="text-[11px] text-red-600 mt-0.5">Duhet të jetë mes 0 dhe çmimit normal</div>}
+              </div>
+            )}
 
             <div className="md:col-span-3">
               <Label className={label}>Data e dokumentit</Label>
@@ -455,8 +470,9 @@ export default function SaleEntryPage() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-slate-600">Nëntotali</span><span className="font-mono">{eur(subtotal)}</span></div>
               <div className="flex justify-between pt-2 border-t border-slate-300 text-lg font-bold">
-                <span>TOTALI</span><span className="font-mono text-emerald-600" data-testid="sale-total">{eur(total)}</span>
+                <span>{split.final !== total ? "TOTALI PËR PAGESË" : "TOTALI"}</span><span className="font-mono text-emerald-600" data-testid="sale-total">{eur(split.final)}</span>
               </div>
+              <PaymentBreakdown split={split} method={paymentMethod} rates={rates} />
             </div>
           </div>
         </div>
