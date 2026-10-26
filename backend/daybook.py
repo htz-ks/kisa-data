@@ -173,16 +173,16 @@ def make_router(db, require_admin, now_utc, company_header):
 
         async for sv in db.services.find({"delivered_date": {"$gte": d_from, "$lte": d_to}, "status": "delivered", "deleted": {"$ne": True}}):
             paid = r2(sv.get("paid_amount"))
-            if paid <= 0:
-                continue
             cost = r2(sv.get("parts_cost"))
+            if paid <= 0 and cost <= 0:
+                continue
             out.append({
                 "key": f"service:{sv['_id']}", "source": "service", "source_id": str(sv["_id"]), "date": sv["delivered_date"],
-                "time": sv.get("delivered_date", ""), "type": "Servis",
+                "time": sv.get("delivered_at") or sv.get("delivered_date", ""), "type": "Servis",
                 "description": f"{sv.get('device', '')} · {sv.get('defect', '')} · {sv.get('first_name', '')} {sv.get('last_name', '')}".strip(),
                 "invoice_no": sv.get("number", ""), "hyrje": paid, "dalje": 0.0, "method": sv.get("paid_method") or "cash",
                 "revenue": paid, "cost": cost, "cost_missing": False, "opex": 0.0, "value": paid,
-                "note": "pa kosto pjesësh" if sv.get("parts_cost") is None else "",
+                "note": "falas / garanci" if paid <= 0 else ("pa kosto pjesësh" if sv.get("parts_cost") is None else ""),
             })
 
         async for m in db.daybook_manual.find({"date": {"$gte": d_from, "$lte": d_to}, "deleted": {"$ne": True}}):

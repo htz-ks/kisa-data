@@ -89,3 +89,5 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - 2026-06: Shitja vendore quick buttons save draft (sessionStorage sale-draft) + floating "Kthehu te Shitja vendore" button (back-to-sale-btn) restores the sale
 
 - 2026-06: Qarkullimet Ditore (/daily-flow, backend/daybook.py): kalendar, tabela nga shitjet/blerjet/shpenzimet/pagesat/kthimet + hyrje/dalje manuale, korrigjime me historik (edhe nga Faturat/Blerjet/Shpenzimet), Arka Ditore me bartje, Numërimi i Parave 12 prerje, fitimi ditor, raporte ditë/muaj/vit me Excel+PDF. Admin only. Test data cleaned; user must set Arka fillestare.
+
+- 2026-06: Servis / Shërbimi (/services, backend/services.py): pranim, kërkim, filtra, statuse, historik, fshirje e butë, fletëpranim A4; integruar te Qarkullimet Ditore (pranuar sot vs arkëtuar; paraja hyn vetëm në dorëzim, kostoja e pjesëve zbritet nga fitimi)

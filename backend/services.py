@@ -1,6 +1,7 @@
 """Servis / Shërbimi: phones received for repair."""
 import io
 import re
+from xml.sax.saxutils import escape
 from datetime import datetime
 from typing import Optional, Literal
 from zoneinfo import ZoneInfo
@@ -111,9 +112,10 @@ def make_router(db, require_admin, now_utc, company_header):
             if body.paid_amount is None:
                 raise HTTPException(400, "Shkruaj sa pagoi klienti (0 nëse falas)")
             upd.update({"paid_amount": round(body.paid_amount, 2), "paid_method": body.paid_method,
-                        "delivered_date": today_local() if old.get("status") != "delivered" else old.get("delivered_date") or today_local()})
+                        "delivered_date": today_local() if old.get("status") != "delivered" else old.get("delivered_date") or today_local(),
+                        "delivered_at": now_utc().isoformat() if old.get("status") != "delivered" else old.get("delivered_at") or now_utc().isoformat()})
         else:
-            upd.update({"paid_amount": None, "paid_method": None, "delivered_date": None})
+            upd.update({"paid_amount": None, "paid_method": None, "delivered_date": None, "delivered_at": None})
         changes = {"status": [STATUSES.get(old.get("status")), STATUSES[body.status]]}
         if body.status == "delivered":
             changes["paguar"] = [old.get("paid_amount"), upd["paid_amount"]]
@@ -144,11 +146,11 @@ def make_router(db, require_admin, now_utc, company_header):
         rows = [
             ["Nr. i servisit", s["number"]], ["Data e pranimit", f"{d[2]}.{d[1]}.{d[0]}"],
             ["Klienti", f"{s['first_name']} {s.get('last_name', '')}".strip()], ["Telefoni i klientit", s["phone"]],
-            ["Pajisja (marka / modeli)", s["device"]], ["Defekti / problemi", Paragraph(s["defect"], body)],
+            ["Pajisja (marka / modeli)", s["device"]], ["Defekti / problemi", Paragraph(escape(s["defect"]), body)],
             ["Çmimi i riparimit", f"{s['price']:.2f} €" if s.get("price") is not None else "Do të caktohet pas kontrollit"],
         ]
         if s.get("notes"):
-            rows.append(["Shënime", Paragraph(s["notes"], body)])
+            rows.append(["Shënime", Paragraph(escape(s["notes"]), body)])
         t = Table(rows, colWidths=[55 * mm, 125 * mm])
         t.setStyle(TableStyle([
             ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"), ("FONTSIZE", (0, 0), (-1, -1), 11),

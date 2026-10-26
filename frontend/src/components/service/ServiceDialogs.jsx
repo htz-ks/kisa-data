@@ -44,6 +44,8 @@ export const DeliverDialog = ({ service, onClose, onConfirm }) => {
   );
 };
 
+const LABELS = { first_name: "Emri", last_name: "Mbiemri", phone: "Telefoni", device: "Pajisja", defect: "Defekti", received_date: "Data e pranimit",
+  price: "Çmimi", parts_cost: "Kostoja e pjesëve", notes: "Shënime", status: "Statusi", paguar: "Paguar" };
 const show = (v) => (v == null || v === "" ? "—" : String(v));
 
 export const ServiceHistoryDialog = ({ service, onClose }) => (
@@ -55,7 +57,7 @@ export const ServiceHistoryDialog = ({ service, onClose }) => (
           <div key={i} className="border border-slate-800 rounded-lg p-3 text-sm" data-testid={`service-history-item-${i}`}>
             <div className="flex justify-between gap-2"><b>{h.action}</b><span className="text-xs text-slate-500 font-mono-pd">{new Date(h.at).toLocaleString("sq-AL")} · {h.user}</span></div>
             {Object.entries(h.changes || {}).map(([k, [a, b]]) => (
-              <div key={k} className="text-xs text-slate-400 mt-1">{k}: <span className="line-through">{show(a)}</span> → <span className="text-slate-200">{show(b)}</span></div>
+              <div key={k} className="text-xs text-slate-400 mt-1">{LABELS[k] || k}: <span className="line-through">{show(a)}</span> → <span className="text-slate-200">{show(b)}</span></div>
             ))}
           </div>
         ))}

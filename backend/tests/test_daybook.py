@@ -39,7 +39,8 @@ def future(admin):
         admin.delete(f"{API}/daybook/manual/{mid}", json={"reason": "TEST cleanup"})
     for eid in created["expense"]:
         admin.delete(f"{API}/expenses/{eid}")
-    admin.put(f"{API}/daybook/settings", json=REAL_SETTINGS)
+    # restore whatever the user had before the test (never hardcode real settings)
+    admin.put(f"{API}/daybook/settings", json={"start_date": orig["start_date"], "opening_cash": orig["opening_cash"]} if orig.get("set") else REAL_SETTINGS)
     print("original settings were", orig)
 
 
