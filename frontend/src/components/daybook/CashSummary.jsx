@@ -50,6 +50,7 @@ export const CashSummary = ({ data, onChange }) => {
       <Line n={1} label="Arka në fillim të ditës" value={data.opening_cash} tid="cash-opening" />
       <Line n={2} label="Të hyrat nga shitjet Cash" value={s.cash_sales} sign="+" tid="cash-sales" />
       <Line n={3} label="Arkëtimet e borxheve" value={s.debt_collections} sign="+" tid="cash-collections" />
+      {s.service_cash > 0 && <Line n="•" label="Arkëtime nga servisi" value={s.service_cash} sign="+" tid="cash-service" />}
       {s.manual_in > 0 && <Line n="•" label="Hyrje të tjera (manuale)" value={s.manual_in} sign="+" tid="cash-manual-in" />}
       <Line n={4} label="Daljet për blerje" value={s.purchases_out} sign="−" tid="cash-purchases" />
       <Line n={5} label="Daljet për shpenzime" value={s.expenses_out} sign="−" tid="cash-expenses" />
@@ -73,6 +74,7 @@ export const ProfitBox = ({ s }) => {
       {[["Të ardhurat nga shitjet (pa kthimet)", s.revenue], ["Kostoja e produkteve të shitura", -s.cogs], ["Fitimi bruto", s.gross_profit, true], ["Shpenzimet operative", -s.opex]].map(([l, v, b]) => (
         <div key={l} className={`flex justify-between py-1.5 border-b border-slate-800/40 ${b ? "font-bold" : ""}`}><span>{l}</span><span className="font-mono-pd">{eur(v)}</span></div>
       ))}
+      {(s.service_income > 0 || s.service_parts_cost > 0) && <div className="flex justify-between py-1.5 border-b border-slate-800/40" data-testid="profit-service"><span>Fitimi nga servisi ({eur(s.service_income)} − pjesët {eur(s.service_parts_cost)})</span><span className="font-mono-pd">{eur(s.service_profit)}</span></div>}
       {s.other_income > 0 && <div className="flex justify-between py-1.5 border-b border-slate-800/40"><span>Të ardhura të tjera</span><span className="font-mono-pd">{eur(s.other_income)}</span></div>}
       <div className={`flex justify-between pt-3 text-xl font-extrabold ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
         <span>{net >= 0 ? "Fitimi neto" : "Humbja neto"}</span><span className="font-mono-pd" data-testid="profit-net">{eur(net)}</span>

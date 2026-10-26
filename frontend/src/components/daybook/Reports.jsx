@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { openPdf } from "@/components/DebtLedger";
 import { download, inp, MONTHS } from "./util";
 
-const COLS = [["sales_total", "Shitjet"], ["purchases_total", "Blerjet"], ["expenses_total", "Shpenzimet"], ["returns_total", "Kthimet"],
+const COLS = [["sales_total", "Shitjet"], ["purchases_total", "Blerjet"], ["expenses_total", "Shpenzimet"], ["returns_total", "Kthimet"], ["service_income", "Servisi"],
   ["cash_in", "Hyrje Cash"], ["cash_out", "Dalje Cash"], ["gross_profit", "Fitimi bruto"], ["net_profit", "Fitimi neto"],
   ["cash_end", "Arka në fund"], ["count_difference", "Dif. numërimit"]];
 const period = (p) => (p.length === 10 ? p.split("-").reverse().join(".") : p.length === 7 ? `${MONTHS[Number(p.slice(5)) - 1]} ${p.slice(0, 4)}` : p);

@@ -16,6 +16,7 @@ export const TYPE_STYLE = {
   "Kthim": "bg-amber-100 text-amber-800",
   "Arkëtim borxhi": "bg-sky-100 text-sky-800",
   "Pagesë furnitori": "bg-indigo-100 text-indigo-800",
+  "Servis": "bg-cyan-100 text-cyan-800",
   "Hyrje manuale": "bg-teal-100 text-teal-800",
   "Dalje manuale": "bg-orange-100 text-orange-800",
 };

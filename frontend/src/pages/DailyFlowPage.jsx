@@ -8,6 +8,7 @@ import { FlowTable } from "@/components/daybook/FlowTable";
 import { CashCount } from "@/components/daybook/CashCount";
 import { CashSummary, ProfitBox } from "@/components/daybook/CashSummary";
 import { Reports } from "@/components/daybook/Reports";
+import { ServicesBox } from "@/components/daybook/ServicesBox";
 import { MONTHS, todayLocal } from "@/components/daybook/util";
 
 const Card = ({ icon: Icon, label, value, tone = "text-slate-900", tid }) => (
@@ -60,6 +61,8 @@ export default function DailyFlowPage() {
           <ProfitBox s={s} />
         </div>
       )}
+
+      {data && <ServicesBox data={data} />}
 
       <Reports key={date.slice(0, 7)} date={date} />
     </div>

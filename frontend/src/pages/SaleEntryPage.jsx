@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard, IdCard, CalendarDays } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard, IdCard, CalendarDays, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
@@ -233,6 +233,9 @@ export default function SaleEntryPage() {
             {isAdmin && (
               <>
                 <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
+                <Button size="sm" variant="outline" onClick={() => goTo("/services")} className="border-cyan-500 text-cyan-700 hover:bg-cyan-50 font-semibold" data-testid="sale-goto-services-btn">
+                  <Wrench className="w-4 h-4 mr-1" /> Servis / Shërbimi
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => goTo("/daily-flow")} className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 font-semibold" data-testid="sale-goto-daily-flow-btn">
                   <CalendarDays className="w-4 h-4 mr-1" /> Qarkullimet Ditore
                 </Button>

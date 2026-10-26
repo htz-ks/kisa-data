@@ -171,6 +171,20 @@ def make_router(db, require_admin, now_utc, company_header):
                 "value": r2(rt.get("refund_total")), "note": "",
             })
 
+        async for sv in db.services.find({"delivered_date": {"$gte": d_from, "$lte": d_to}, "status": "delivered", "deleted": {"$ne": True}}):
+            paid = r2(sv.get("paid_amount"))
+            if paid <= 0:
+                continue
+            cost = r2(sv.get("parts_cost"))
+            out.append({
+                "key": f"service:{sv['_id']}", "source": "service", "source_id": str(sv["_id"]), "date": sv["delivered_date"],
+                "time": sv.get("delivered_date", ""), "type": "Servis",
+                "description": f"{sv.get('device', '')} · {sv.get('defect', '')} · {sv.get('first_name', '')} {sv.get('last_name', '')}".strip(),
+                "invoice_no": sv.get("number", ""), "hyrje": paid, "dalje": 0.0, "method": sv.get("paid_method") or "cash",
+                "revenue": paid, "cost": cost, "cost_missing": False, "opex": 0.0, "value": paid,
+                "note": "pa kosto pjesësh" if sv.get("parts_cost") is None else "",
+            })
+
         async for m in db.daybook_manual.find({"date": {"$gte": d_from, "$lte": d_to}, "deleted": {"$ne": True}}):
             amt = r2(m.get("amount"))
             is_in = m["kind"] == "in"
@@ -204,7 +218,9 @@ def make_router(db, require_admin, now_utc, company_header):
     def summarize(entries: list) -> dict:
         by = lambda src, field: r2(sum(e[field] for e in entries if e["source"] == src and e["method"] == "cash"))  # noqa: E731
         revenue = r2(sum(e["revenue"] for e in entries if e["source"] in ("sale", "return")))
-        cost = r2(sum(e["cost"] for e in entries))
+        cost = r2(sum(e["cost"] for e in entries if e["source"] in ("sale", "return")))
+        service_rev = r2(sum(e["revenue"] for e in entries if e["source"] == "service"))
+        service_cost = r2(sum(e["cost"] for e in entries if e["source"] == "service"))
         other_income = r2(sum(e["revenue"] for e in entries if e["source"] == "manual"))
         opex = r2(sum(e["opex"] for e in entries))
         gross = r2(revenue - cost)
@@ -212,6 +228,7 @@ def make_router(db, require_admin, now_utc, company_header):
             "cash_sales": by("sale", "hyrje"),
             "debt_collections": r2(sum(e["hyrje"] for e in entries if e["type"] == "Arkëtim borxhi" and e["method"] == "cash")),
             "manual_in": by("manual", "hyrje"),
+            "service_cash": by("service", "hyrje"),
             "purchases_out": by("purchase", "dalje"),
             "expenses_out": by("expense", "dalje"),
             "supplier_payments": r2(sum(e["dalje"] for e in entries if e["type"] == "Pagesë furnitori" and e["method"] == "cash")),
@@ -226,7 +243,9 @@ def make_router(db, require_admin, now_utc, company_header):
             "expenses_total": r2(sum(e["value"] for e in entries if e["source"] == "expense")),
             "returns_total": r2(sum(e["value"] for e in entries if e["source"] == "return")),
             "revenue": revenue, "cogs": cost, "gross_profit": gross, "other_income": other_income, "opex": opex,
-            "net_profit": r2(gross + other_income - opex),
+            "service_income": service_rev, "service_parts_cost": service_cost, "service_profit": r2(service_rev - service_cost),
+            "service_delivered": sum(1 for e in entries if e["source"] == "service"),
+            "net_profit": r2(gross + service_rev - service_cost + other_income - opex),
             "profit_incomplete": any(e["cost_missing"] for e in entries),
             "missing_cost_count": sum(1 for e in entries if e["cost_missing"]),
         }
@@ -258,7 +277,11 @@ def make_router(db, require_admin, now_utc, company_header):
             count = {"counts": c.get("counts", {}), "total": counted, "note": c.get("note", ""),
                      "difference": r2(counted - closing) if closing is not None else None,
                      "updated_at": c.get("updated_at"), "updated_by": c.get("updated_by_name", "")}
-        return {"date": date, "settings": st, "before_start": opening is None, "entries": todays, "summary": s,
+        received = [{"id": str(x["_id"]), "number": x.get("number"), "name": f"{x.get('first_name', '')} {x.get('last_name', '')}".strip(),
+                     "phone": x.get("phone"), "device": x.get("device"), "defect": x.get("defect"), "price": x.get("price"),
+                     "status": x.get("status"), "paid_amount": x.get("paid_amount")}
+                    async for x in db.services.find({"received_date": date, "deleted": {"$ne": True}}).sort("created_at", 1)]
+        return {"date": date, "services_received": received, "settings": st, "before_start": opening is None, "entries": todays, "summary": s,
                 "opening_cash": opening, "closing_cash": closing, "count": count, "turnover": s["sales_total"]}
 
     @router.get("/settings")
@@ -398,7 +421,7 @@ def make_router(db, require_admin, now_utc, company_header):
         for g in groups.values():
             s = summarize(g.pop("entries"))
             rows.append({**g, **s})
-        keys = ("sales_total", "purchases_total", "expenses_total", "returns_total", "cash_in", "cash_out", "bank_in", "bank_out",
+        keys = ("sales_total", "service_income", "purchases_total", "expenses_total", "returns_total", "cash_in", "cash_out", "bank_in", "bank_out",
                 "revenue", "cogs", "gross_profit", "opex", "net_profit", "count_difference")
         totals = {k: r2(sum(r[k] for r in rows)) for k in keys}
         totals["profit_incomplete"] = any(r["profit_incomplete"] for r in rows)
@@ -411,7 +434,7 @@ def make_router(db, require_admin, now_utc, company_header):
         return {"rows": rows, "totals": totals}
 
     COLS = [("period", "Periudha"), ("sales_total", "Shitjet"), ("purchases_total", "Blerjet"), ("expenses_total", "Shpenzimet"),
-            ("returns_total", "Kthimet"), ("cash_in", "Hyrje Cash"), ("cash_out", "Dalje Cash"), ("bank_in", "Hyrje Bankë"),
+            ("returns_total", "Kthimet"), ("service_income", "Servisi"), ("cash_in", "Hyrje Cash"), ("cash_out", "Dalje Cash"), ("bank_in", "Hyrje Bankë"),
             ("bank_out", "Dalje Bankë"), ("gross_profit", "Fitimi bruto"), ("net_profit", "Fitimi neto"),
             ("cash_end", "Arka në fund"), ("count_difference", "Diferenca numërimit")]
 

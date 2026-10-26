@@ -14,6 +14,7 @@ import PaymentsPage from "@/pages/PaymentsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import CustomerCardsPage from "@/pages/CustomerCardsPage";
 import DailyFlowPage from "@/pages/DailyFlowPage";
+import ServicesPage from "@/pages/ServicesPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UsersPage from "@/pages/UsersPage";
 import PrintSalePage from "@/pages/PrintSalePage";
@@ -45,6 +46,7 @@ function App() {
               <Route path="/pos" element={<POSPage />} />
               <Route path="/sale/new" element={<SaleEntryPage />} />
               <Route path="/daily-flow" element={<Protected adminOnly><DailyFlowPage /></Protected>} />
+              <Route path="/services" element={<Protected adminOnly><ServicesPage /></Protected>} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/stock" element={<StockPage />} />
               <Route path="/categories" element={<Protected adminOnly><CategoriesPage /></Protected>} />
