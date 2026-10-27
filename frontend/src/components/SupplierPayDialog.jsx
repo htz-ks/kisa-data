@@ -4,11 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PaySource, payFields } from "@/components/BankSelect";
 import { toast } from "sonner";
 
 export const SupplierPayDialog = ({ supplier, onClose, onPaid }) => {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [src, setSrc] = useState("cash");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (supplier) { setAmount(String(supplier.balance)); setNotes(""); } }, [supplier]);
@@ -18,7 +20,7 @@ export const SupplierPayDialog = ({ supplier, onClose, onPaid }) => {
     if (!(value > 0)) return toast.error("Shkruaj shumën");
     setBusy(true);
     try {
-      await api.post("/payments", { entity_type: "supplier", entity_id: supplier.id, amount: value, direction: "out", notes });
+      await api.post("/payments", { entity_type: "supplier", entity_id: supplier.id, amount: value, direction: "out", notes, ...payFields(src) });
       toast.success(`U pagua ${eur(value)} te ${supplier.name}`);
       onClose(); onPaid && onPaid();
     } catch (e) {
@@ -35,6 +37,10 @@ export const SupplierPayDialog = ({ supplier, onClose, onPaid }) => {
           <Label>Shuma (€)</Label>
           <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
             className="mt-1 bg-slate-900 border-slate-800" data-testid="supplier-pay-amount-input" />
+        </div>
+        <div>
+          <Label>Paguar me</Label>
+          <div className="mt-1"><PaySource value={src} onChange={setSrc} testId="supplier-pay-source" /></div>
         </div>
         <div>
           <Label>Shënim</Label>

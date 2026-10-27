@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Banknote, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { PaySource, payFields } from "@/components/BankSelect";
 import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 
 const CATEGORIES = ["Qiraja", "Rryma", "Uji", "Interneti", "Paga", "Transporti", "Furnizime zyre", "Servisi", "Taksat", "Tjetër"];
 const today = () => new Date().toISOString().slice(0, 10);
-const EMPTY = { category: "Tjetër", description: "", amount: "", date: today() };
+const EMPTY = { category: "Tjetër", description: "", amount: "", date: today(), src: "cash" };
 
 const ExpenseForm = ({ onSaved }) => {
   const [f, setF] = useState(EMPTY);
@@ -20,9 +21,10 @@ const ExpenseForm = ({ onSaved }) => {
     if (!(Number(f.amount) > 0)) { toast.error("Shkruaj shumën e shpenzimit"); return; }
     setSaving(true);
     try {
-      await api.post("/expenses", { ...f, amount: Number(f.amount) });
+      const { src, ...rest } = f;
+      await api.post("/expenses", { ...rest, amount: Number(f.amount), ...payFields(src) });
       toast.success(`Shpenzimi ${eur(Number(f.amount))} u regjistrua`);
-      setF({ ...EMPTY, date: f.date });
+      setF({ ...EMPTY, date: f.date, src: f.src });
       await onSaved();
     } catch (e) {
       toast.error(formatApiErrorDetail(e.response?.data?.detail));
@@ -51,6 +53,7 @@ const ExpenseForm = ({ onSaved }) => {
         <Label>Shuma (€)</Label>
         <Input type="number" step="0.01" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })}
           onKeyDown={(e) => e.key === "Enter" && save()} autoFocus className={inp + " font-mono-pd"} data-testid="expense-amount-input" />
+        <div className="mt-2"><PaySource value={f.src} onChange={(v) => setF({ ...f, src: v })} testId="expense-pay-source" className="h-8 text-xs" /></div>
       </div>
       <div className="md:col-span-1">
         <Button onClick={save} disabled={saving} className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="expense-save-btn">

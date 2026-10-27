@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CustomerHistoryDrawer from "@/components/CustomerHistoryDrawer";
 import SupplierHistoryDrawer from "@/components/SupplierHistoryDrawer";
+import { PaySource, payFields } from "@/components/BankSelect";
 import { Trash2 } from "lucide-react";
 
 const DebtRow = ({ c, type, onPaid, onOpen }) => {
   const [amount, setAmount] = useState("");
+  const [src, setSrc] = useState("cash");
   const [saving, setSaving] = useState(false);
   const debt = c.balance || 0;
   const paid = Number(amount) || 0;
@@ -22,7 +24,7 @@ const DebtRow = ({ c, type, onPaid, onOpen }) => {
     try {
       await api.post("/payments", {
         entity_type: type, entity_id: c.id, amount: paid,
-        direction: type === "customer" ? "in" : "out", notes: "",
+        direction: type === "customer" ? "in" : "out", notes: "", ...payFields(src),
       });
       toast.success(`${c.name}: u pagua ${eur(paid)}, mbetet ${eur(remaining)}`);
       setAmount("");
@@ -46,6 +48,7 @@ const DebtRow = ({ c, type, onPaid, onOpen }) => {
           onChange={(e) => setAmount(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && pay()}
           className="h-9 w-32 ml-auto text-right bg-slate-900 border-slate-700 font-mono-pd" data-testid={`debt-pay-input-${c.id}`} />
+        <div className="mt-1 w-32 ml-auto"><PaySource value={src} onChange={setSrc} testId={`debt-pay-source-${c.id}`} className="h-7 text-xs" /></div>
       </td>
       <td className={`px-4 py-3 text-right font-mono-pd font-bold ${remaining === 0 && paid > 0 ? "text-emerald-400" : "text-slate-100"}`}
         data-testid={`debt-remaining-${c.id}`}>{eur(remaining)}</td>

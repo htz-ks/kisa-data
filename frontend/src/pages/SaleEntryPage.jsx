@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard, IdCard, CalendarDays, Wrench } from "lucide-react";
+import { Trash2, Plus, Save, X, RefreshCw, ScanLine, UserPlus, Printer, ShoppingBag, Undo2, Banknote, List, Warehouse, CreditCard, IdCard, CalendarDays, Wrench, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
@@ -16,6 +16,7 @@ import { WarrantyPicker } from "@/components/WarrantyPicker";
 import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useRates, computeSplit, PaymentBreakdown } from "@/components/PaymentSplit";
+import { PaySource } from "@/components/BankSelect";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
 export const DRAFT_KEY = "sale-draft";
@@ -39,6 +40,7 @@ export default function SaleEntryPage() {
   const [priceMode, setPriceMode] = useState("retail"); // retail | wholesale
   const [paid, setPaid] = useState("");
   const [cashAmount, setCashAmount] = useState("");
+  const [bank, setBank] = useState("");
   const rates = useRates();
   const [rows, setRows] = useState([emptyRow()]);
   const [notes, setNotes] = useState("");
@@ -194,6 +196,7 @@ export default function SaleEntryPage() {
     if (dup) { toast.error(`IMEI ${dup} është vendosur dy herë`); return; }
     const totalDiscount = rows.reduce((s, r) => s + (Number(r.discount) || 0), 0);
     if (badRow) { toast.error("Pjesa Cash e një artikulli nuk mund të jetë më e madhe se totali i tij"); return; }
+    if ((paymentMethod === "card" || paymentMethod === "mixed") && !bank) { toast.error("Zgjidh bankën ku u realizua pagesa (TEB, Raiffeisen, BKT, NLB)"); return; }
     if (!split.valid) { toast.error("Shuma Cash duhet të jetë më e madhe se 0 dhe më e vogël se çmimi normal"); return; }
     setSaving(true);
     try {
@@ -204,6 +207,7 @@ export default function SaleEntryPage() {
         paid_amount: paymentMethod === "debt" ? Number(paid || 0) : split.final,
         payment_method: paymentMethod,
         cash_amount: paymentMethod === "mixed" ? split.cash : null,
+        bank: paymentMethod === "card" || paymentMethod === "mixed" ? bank : null,
         document_date: docDate,
         due_date: dueDate,
         notes,
@@ -248,6 +252,9 @@ export default function SaleEntryPage() {
                 <div className="hidden md:block w-px h-7 bg-slate-300 mx-1" />
                 <Button size="sm" variant="outline" onClick={() => goTo("/services")} className="border-cyan-500 text-cyan-700 hover:bg-cyan-50 font-semibold" data-testid="sale-goto-services-btn">
                   <Wrench className="w-4 h-4 mr-1" /> Servis / Shërbimi
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => goTo("/banks")} className="border-sky-500 text-sky-700 hover:bg-sky-50 font-semibold" data-testid="sale-goto-banks-btn">
+                  <Landmark className="w-4 h-4 mr-1" /> Gjendja e Bankave
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => goTo("/daily-flow")} className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 font-semibold" data-testid="sale-goto-daily-flow-btn">
                   <CalendarDays className="w-4 h-4 mr-1" /> Qarkullimet Ditore
@@ -334,6 +341,12 @@ export default function SaleEntryPage() {
                 </SelectContent>
               </Select>
             </div>
+            {(paymentMethod === "card" || paymentMethod === "mixed") && (
+              <div className="md:col-span-3">
+                <Label className={label}>Banka e pagesës me kartelë *</Label>
+                <div className="mt-1"><PaySource value={bank} onChange={setBank} cash={false} testId="sale-bank-select" className={field} /></div>
+              </div>
+            )}
             {paymentMethod === "mixed" && (
               <div className="md:col-span-3">
                 <Label className={label}>Shuma Cash (nga artikujt)</Label>

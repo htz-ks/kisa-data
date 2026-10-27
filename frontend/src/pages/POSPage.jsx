@@ -15,6 +15,7 @@ import { Search, Plus, Minus, Trash2, ShoppingCart, Smartphone, Box, Download, S
 import { toast } from "sonner";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useRates, computeSplit, PaymentBreakdown } from "@/components/PaymentSplit";
+import { PaySource } from "@/components/BankSelect";
 import PrintMenu from "@/components/PrintMenu";
 
 export default function POSPage() {
@@ -25,6 +26,7 @@ export default function POSPage() {
   const [customerId, setCustomerId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
+  const [bank, setBank] = useState("");
   const rates = useRates();
   const [paid, setPaid] = useState("");
   const [discount, setDiscount] = useState(0);
@@ -141,6 +143,7 @@ export default function POSPage() {
       toast.error("Shporta është bosh");
       return;
     }
+    if ((paymentMethod === "card" || paymentMethod === "mixed") && !bank) { toast.error("Zgjidh bankën e pagesës me kartelë"); return; }
     if (!split.valid) { toast.error("Shuma Cash duhet të jetë më e madhe se 0 dhe më e vogël se çmimi normal"); return; }
     try {
       const payload = {
@@ -155,6 +158,7 @@ export default function POSPage() {
         paid_amount: paymentMethod === "debt" ? Number(paid || 0) : split.final,
         payment_method: paymentMethod,
         cash_amount: paymentMethod === "mixed" ? split.cash : null,
+        bank: paymentMethod === "card" || paymentMethod === "mixed" ? bank : null,
       };
       const { data } = await api.post("/sales", payload);
       toast.success(`Fatura ${data.invoice_no} u krijua`);
@@ -286,6 +290,12 @@ export default function POSPage() {
                   </Select>
                 </div>
               </div>
+              {(paymentMethod === "card" || paymentMethod === "mixed") && (
+                <div>
+                  <Label className="text-xs">Banka e pagesës me kartelë *</Label>
+                  <div className="mt-1"><PaySource value={bank} onChange={setBank} cash={false} testId="pos-bank-select" className="h-9" /></div>
+                </div>
+              )}
               {paymentMethod === "mixed" && (
                 <div>
                   <Label className="text-xs">Shuma Cash €</Label>

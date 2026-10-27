@@ -25,7 +25,7 @@ const Row = ({ e, onEdit, onHistory, onDelete }) => (
       {e.cost_missing ? <span className="inline-flex items-center gap-1 text-amber-600" title="Mungon çmimi i blerjes"><AlertTriangle className="w-3.5 h-3.5" /> i paplotë</span> : e.profit ? eur(e.profit) : "—"}
     </td>
     <td className="px-2 py-2 whitespace-nowrap text-right">
-      {e.source !== "service" && <button onClick={() => onEdit(e)} className="p-1.5 text-slate-500 hover:text-emerald-600" title="Korrigjo" data-testid={`flow-edit-${e.key}`}><Pencil className="w-4 h-4" /></button>}
+      {!["service", "transfer"].includes(e.source) && <button onClick={() => onEdit(e)} className="p-1.5 text-slate-500 hover:text-emerald-600" title="Korrigjo" data-testid={`flow-edit-${e.key}`}><Pencil className="w-4 h-4" /></button>}
       {e.source !== "service" && <button onClick={() => onHistory(e.key)} className="p-1.5 text-slate-500 hover:text-sky-600" title="Historiku" data-testid={`flow-history-${e.key}`}><History className="w-4 h-4" /></button>}
       {e.source === "manual" && <button onClick={() => onDelete(e)} className="p-1.5 text-slate-500 hover:text-rose-600" title="Fshi" data-testid={`flow-delete-${e.key}`}><Trash2 className="w-4 h-4" /></button>}
     </td>

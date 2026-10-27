@@ -12,6 +12,7 @@ import hmac
 from dateutil.relativedelta import relativedelta
 from zoneinfo import ZoneInfo
 from finance import get_rates, split_payment
+from banks import check_bank
 import fitz
 from PIL import Image, ImageOps
 import hashlib
@@ -212,6 +213,8 @@ class PurchaseIn(BaseModel):
     paid_amount: float = 0.0
     notes: Optional[str] = ""
     seller_name: Optional[str] = ""  # typed manually when not a saved supplier
+    pay_method: Literal["cash", "bank"] = "cash"
+    bank: Optional[str] = None
 
 
 class SaleItem(BaseModel):
@@ -228,6 +231,7 @@ class SaleIn(BaseModel):
     paid_amount: float = 0.0
     payment_method: Literal["cash", "card", "mixed", "debt"] = "cash"
     cash_amount: Optional[float] = None  # cash part of a mixed payment
+    bank: Optional[str] = None  # bank that received the card part
     notes: Optional[str] = ""
     document_date: Optional[str] = None
     due_date: Optional[str] = None
@@ -243,6 +247,8 @@ class PaymentIn(BaseModel):
     amount: float
     direction: Literal["in", "out"]  # 'in' = received from customer, 'out' = paid to supplier
     notes: Optional[str] = ""
+    pay_method: Literal["cash", "bank"] = "cash"
+    bank: Optional[str] = None
 
 
 class ReturnItem(BaseModel):
@@ -647,6 +653,7 @@ async def create_purchase(body: PurchaseIn, user: dict = Depends(require_admin))
     due = total - paid
     doc = {
         "supplier_id": body.supplier_id or None,
+        "pay_method": body.pay_method, "bank": check_bank(body.pay_method, body.bank),
         **({"seller_type": "citizen", "citizen": {"name": body.seller_name.strip()[:120], "phone": "", "personal_no": ""}}
            if not body.supplier_id and (body.seller_name or "").strip() else {}),
         "items": enriched_items,
@@ -779,6 +786,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
     normal_total = round(max(0.0, subtotal - discount), 2)
     rates = await get_rates(db)
     split = split_payment(normal_total, body.payment_method, body.cash_amount, rates)
+    sale_bank = check_bank("bank" if body.payment_method in ("card", "mixed") else "cash", body.bank)
 
     # phase 2: apply stock changes
     for pid, prod in cache.items():
@@ -820,7 +828,7 @@ async def create_sale(body: SaleIn, user: dict = Depends(get_current_user)):
         "normal_total": normal_total,
         "cash_paid": split["cash_paid"], "card_normal": split["card_normal"], "card_paid": split["card_paid"],
         "card_surcharge": round(total - normal_total, 2), "bank_fee": split["bank_fee"], "vat": split["vat"],
-        "rates": rates,
+        "rates": rates, "bank": sale_bank,
         "document_date": body.document_date,
         "due_date": body.due_date,
         "notes": body.notes,
@@ -1019,6 +1027,7 @@ async def create_payment(body: PaymentIn, user: dict = Depends(get_current_user)
     if body.amount > before + 0.001:
         raise HTTPException(400, f"Pagesa është më e madhe se borxhi ({before:.2f} €)")
     doc = body.model_dump()
+    doc["bank"] = check_bank(body.pay_method, body.bank)
     doc.update({
         "balance_before": before,
         "balance_after": round(before - body.amount, 2),
@@ -1338,6 +1347,8 @@ class ExpenseIn(BaseModel):
     description: Optional[str] = ""
     amount: float
     date: Optional[str] = None
+    pay_method: Literal["cash", "bank"] = "cash"
+    bank: Optional[str] = None
 
 
 @api.get("/expenses")
@@ -1358,6 +1369,7 @@ async def create_expense(body: ExpenseIn, user: dict = Depends(require_admin)):
         raise HTTPException(400, "Data nuk është e vlefshme")
     doc["description"] = (doc["description"] or "")[:300]
     doc["category"] = doc["category"][:60]
+    doc["bank"] = check_bank(body.pay_method, body.bank)
     doc.update({"created_at": now_utc().isoformat(), "created_by": user["id"], "created_by_name": user.get("name", "")})
     r = await db.expenses.insert_one(doc)
     doc["_id"] = r.inserted_id
@@ -1827,6 +1839,8 @@ async def shutdown():
 
 from finance import make_router as make_finance_router  # noqa: E402
 api.include_router(make_finance_router(db, get_current_user, require_admin))
+from banks import make_router as make_banks_router  # noqa: E402
+api.include_router(make_banks_router(db, require_admin, now_utc))
 from daybook import make_router as make_daybook_router  # noqa: E402
 api.include_router(make_daybook_router(db, require_admin, now_utc, _company_header))
 from services import make_router as make_services_router  # noqa: E402

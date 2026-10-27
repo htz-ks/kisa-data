@@ -135,7 +135,7 @@ def make_router(db, require_admin, now_utc, company_header):
                 "key": f"payment:{p['_id']}", "source": "payment", "source_id": str(p["_id"]), "date": d,
                 "time": p.get("created_at", ""), "type": "Arkëtim borxhi" if is_c else "Pagesë furnitori",
                 "description": f"{name}{' · ' + p['notes'] if p.get('notes') else ''}", "invoice_no": "",
-                "hyrje": amt if is_c else 0.0, "dalje": 0.0 if is_c else amt, "method": "cash",
+                "hyrje": amt if is_c else 0.0, "dalje": 0.0 if is_c else amt, "method": "bank" if p.get("bank") else "cash", "bank": p.get("bank"),
                 "revenue": 0.0, "cost": 0.0, "cost_missing": False, "opex": 0.0, "value": amt, "note": "",
             })
 
@@ -150,7 +150,7 @@ def make_router(db, require_admin, now_utc, company_header):
                 "key": f"purchase:{p['_id']}", "source": "purchase", "source_id": str(p["_id"]), "date": d,
                 "time": p.get("created_at", ""), "type": "Blerje", "description": f"{names} · {seller or 'Pa furnitor'}",
                 "invoice_no": f"BL-{str(p['_id'])[-6:].upper()}", "hyrje": 0.0, "dalje": r2(p.get("paid_amount")),
-                "method": "cash", "revenue": 0.0, "cost": 0.0, "cost_missing": False, "opex": 0.0,
+                "method": "bank" if p.get("bank") else "cash", "bank": p.get("bank"), "revenue": 0.0, "cost": 0.0, "cost_missing": False, "opex": 0.0,
                 "value": r2(p.get("total")), "note": f"Borxh {due:.2f} €" if due > 0.004 else "",
             })
 
@@ -162,8 +162,8 @@ def make_router(db, require_admin, now_utc, company_header):
             out.append({
                 "key": f"expense:{e['_id']}", "source": "expense", "source_id": str(e["_id"]), "date": e["date"],
                 "time": e.get("created_at", ""), "type": "Shpenzim", "description": desc, "invoice_no": "",
-                "hyrje": 0.0, "dalje": amt, "method": "cash", "revenue": 0.0, "cost": 0.0, "cost_missing": False,
-                "opex": amt, "value": amt, "note": "",
+                "hyrje": 0.0, "dalje": amt, "method": "bank" if e.get("bank") else "cash", "bank": e.get("bank"),
+                "revenue": 0.0, "cost": 0.0, "cost_missing": False, "opex": amt, "value": amt, "note": "",
             })
 
         async for rt in db.returns.find(created):
@@ -196,6 +196,18 @@ def make_router(db, require_admin, now_utc, company_header):
                 "note": "falas / garanci" if paid <= 0 else ("pa kosto pjesësh" if sv.get("parts_cost") is None and not sv.get("parts") else ""),
             })
 
+        async for t in db.bank_transfers.find({"date": {"$gte": d_from, "$lte": d_to}}):
+            src, dst, amt = t["source"], t["target"], r2(t["amount"])
+            lbl = lambda x: "Arka" if x == "cash" else x  # noqa: E731
+            out.append({
+                "key": f"transfer:{t['_id']}", "source": "transfer", "source_id": str(t["_id"]), "date": t["date"], "time": t["created_at"],
+                "type": "Depozitim në bankë" if src == "cash" else ("Tërheqje nga banka" if dst == "cash" else "Transfertë bankare"),
+                "description": f"{lbl(src)} → {lbl(dst)}{' · ' + t['note'] if t.get('note') else ''}", "invoice_no": "",
+                "hyrje": amt if dst == "cash" else 0.0, "dalje": amt if src == "cash" else 0.0, "method": "cash" if "cash" in (src, dst) else "bank",
+                "cash_in": amt if dst == "cash" else 0.0, "bank_in": amt if dst != "cash" else 0.0,
+                "revenue": 0.0, "cost": 0.0, "cost_missing": False, "opex": 0.0, "value": amt, "note": "",
+            })
+
         async for m in db.daybook_manual.find({"date": {"$gte": d_from, "$lte": d_to}, "deleted": {"$ne": True}}):
             amt = r2(m.get("amount"))
             is_in = m["kind"] == "in"
@@ -225,7 +237,11 @@ def make_router(db, require_admin, now_utc, company_header):
                 e["cash_in"], e["bank_in"] = (0.0, e["hyrje"]) if to_bank else (e["hyrje"], 0.0)
                 if e["method"] == "mixed":
                     e["method"] = "cash"
-            e["cash_out"], e["bank_out"] = (0.0, e["dalje"]) if e["method"] == "bank" else (e["dalje"], 0.0)
+            if e["source"] == "transfer":
+                e["cash_out"] = e["dalje"]
+                e["bank_out"] = e["value"] if not e["dalje"] else 0.0
+            else:
+                e["cash_out"], e["bank_out"] = (0.0, e["dalje"]) if e["method"] == "bank" else (e["dalje"], 0.0)
             e.setdefault("vat", 0.0)
             e.setdefault("bank_fee", 0.0)
             e["profit"] = r2(e["revenue"] - e["vat"] - e["cost"] - e["bank_fee"] - e["opex"])

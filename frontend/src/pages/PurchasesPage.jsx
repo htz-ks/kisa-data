@@ -16,6 +16,7 @@ import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 import { ProductFormDialog, EMPTY_PRODUCT } from "@/components/ProductFormDialog";
 import { ProductCombobox, norm } from "@/components/ProductCombobox";
 import { toast } from "sonner";
+import { PaySource, payFields } from "@/components/BankSelect";
 import { CorrectButton } from "@/components/daybook/EntryEditDialog";
 
 export default function PurchasesPage() {
@@ -27,6 +28,7 @@ export default function PurchasesPage() {
   useEffect(() => { if (sp.get("new")) setSp({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [supplierId, setSupplierId] = useState("");
   const [sellerText, setSellerText] = useState("");
+  const [paySrc, setPaySrc] = useState("cash");
   const onSellerType = (v) => {
     setSellerText(v);
     const s = suppliers.find((x) => (x.name || "").trim().toLowerCase() === v.trim().toLowerCase());
@@ -85,6 +87,7 @@ export default function PurchasesPage() {
           imeis: i.imeis || [],
         })),
         paid_amount: Number(paid) || 0,
+        ...payFields(paySrc),
         notes,
       };
       if (payload.items.length === 0) {
@@ -155,6 +158,7 @@ export default function PurchasesPage() {
               <div>
                 <Label>Paguar tani (€)</Label>
                 <Input type="number" step="0.01" value={paid} onChange={(e) => setPaid(e.target.value)} className="mt-1 bg-slate-900 border-slate-800" data-testid="purchase-paid-input" />
+                <div className="mt-2"><Label className="text-xs">Paguar me</Label><div className="mt-1"><PaySource value={paySrc} onChange={setPaySrc} testId="purchase-pay-source" /></div></div>
               </div>
             </div>
 
