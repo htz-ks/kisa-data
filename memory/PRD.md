@@ -93,3 +93,5 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - 2026-06: Servis / Shërbimi (/services, backend/services.py): pranim, kërkim, filtra, statuse, historik, fshirje e butë, fletëpranim A4; integruar te Qarkullimet Ditore (pranuar sot vs arkëtuar; paraja hyn vetëm në dorëzim, kostoja e pjesëve zbritet nga fitimi)
 
 - 2026-06: Cash / Card-Bank / Cash+Card-Bank (mixed). finance.py: rates (card_coef 1.33, bank_fee 6%, VAT 18%, profit tax 10%) editable via Normat (Qarkullimet Ditore), snapshot per sale (sale.rates, normal_total, cash_paid, card_paid, card_surcharge, bank_fee, vat). Card part x coef once; fee & VAT only card/mixed; daybook: turnover cash/card/total, cash only cash parts, profit before tax, tax on positive period profit, net. Invoice shows surcharge + cash/card parts, never fee/cost. Half-up rounding both sides. Services: WhatsApp "gati" text message.
+
+- 2026-06: Servis: pjesë nga stoku (POST/DELETE /api/services/{id}/parts), zbritje/kthim stoku, regjistrim në stock_movements (produkt, sasi, servis, klient, përdorues); kostoja e pjesëve zbritet nga fitimi i servisit; fshirja e servisit kthen pjesët.

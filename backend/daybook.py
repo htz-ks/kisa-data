@@ -184,7 +184,7 @@ def make_router(db, require_admin, now_utc, company_header):
 
         async for sv in db.services.find({"delivered_date": {"$gte": d_from, "$lte": d_to}, "status": "delivered", "deleted": {"$ne": True}}):
             paid = r2(sv.get("paid_amount"))
-            cost = r2(sv.get("parts_cost"))
+            cost = r2(r2(sv.get("parts_cost")) + sum(x["cost_price"] * x["quantity"] for x in sv.get("parts", [])))
             if paid <= 0 and cost <= 0:
                 continue
             out.append({
@@ -193,7 +193,7 @@ def make_router(db, require_admin, now_utc, company_header):
                 "description": f"{sv.get('device', '')} · {sv.get('defect', '')} · {sv.get('first_name', '')} {sv.get('last_name', '')}".strip(),
                 "invoice_no": sv.get("number", ""), "hyrje": paid, "dalje": 0.0, "method": sv.get("paid_method") or "cash",
                 "revenue": paid, "cost": cost, "cost_missing": False, "opex": 0.0, "value": paid,
-                "note": "falas / garanci" if paid <= 0 else ("pa kosto pjesësh" if sv.get("parts_cost") is None else ""),
+                "note": "falas / garanci" if paid <= 0 else ("pa kosto pjesësh" if sv.get("parts_cost") is None and not sv.get("parts") else ""),
             })
 
         async for m in db.daybook_manual.find({"date": {"$gte": d_from, "$lte": d_to}, "deleted": {"$ne": True}}):

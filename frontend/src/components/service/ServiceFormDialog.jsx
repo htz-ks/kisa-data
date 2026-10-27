@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { ServiceParts } from "./ServiceParts";
 import { todayLocal } from "@/components/daybook/util";
 
 const inp = "mt-1 bg-slate-900 border-slate-800";
@@ -14,8 +15,11 @@ const blank = () => ({ first_name: "", last_name: "", phone: "", device: "", def
 export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
   const [f, setF] = useState(blank());
   const [busy, setBusy] = useState(false);
+  const [queued, setQueued] = useState([]);
+  const [current, setCurrent] = useState(null);
   useEffect(() => {
     if (!open) return;
+    setQueued([]); setCurrent(service || null);
     setF(service ? { ...blank(), ...service, price: service.price ?? "", parts_cost: service.parts_cost ?? "" } : blank());
   }, [open, service]);
   const set = (p) => setF((x) => ({ ...x, ...p }));
@@ -27,7 +31,11 @@ export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
     try {
       const body = { first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(), device: f.device.trim(), defect: f.defect.trim(),
         received_date: f.received_date, price: num(f.price), parts_cost: num(f.parts_cost), notes: f.notes };
-      const { data } = service ? await api.put(`/services/${service.id}`, body) : await api.post("/services", body);
+      let { data } = service ? await api.put(`/services/${service.id}`, body) : await api.post("/services", body);
+      for (const p of service ? [] : queued) {
+        try { ({ data } = await api.post(`/services/${data.id}/parts`, { product_id: p.product_id, quantity: p.quantity })); }
+        catch (e) { toast.error(`${p.name}: ${formatApiErrorDetail(e.response?.data?.detail)}`); }
+      }
       toast.success(service ? "Servisi u ndryshua" : `Servisi ${data.number} u regjistrua`);
       onClose(); onSaved(data, !service);
     } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Nuk u ruajt"); }
@@ -56,7 +64,8 @@ export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
             <Textarea value={f.defect} onChange={(e) => set({ defect: e.target.value })} rows={2} className={inp} data-testid="service-defect-input" />
           </div>
           {field("price", "Çmimi i riparimit (€) – opsional", { input: { type: "number", step: "0.01", min: "0" } })}
-          {field("parts_cost", "Kostoja e pjesëve (€) – opsional", { input: { type: "number", step: "0.01", min: "0" } })}
+          {field("parts_cost", "Kosto tjetër e pjesëve, jo nga stoku (€)", { input: { type: "number", step: "0.01", min: "0" } })}
+          <ServiceParts service={current} queued={queued} setQueued={setQueued} onChanged={(d) => { setCurrent(d); onSaved(d, false, true); }} />
           <div className="sm:col-span-2">
             <Label>Shënime shtesë</Label>
             <Textarea value={f.notes} onChange={(e) => set({ notes: e.target.value })} rows={2} className={inp} data-testid="service-notes-input" />

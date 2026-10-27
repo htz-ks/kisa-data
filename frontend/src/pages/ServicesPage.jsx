@@ -48,7 +48,7 @@ export default function ServicesPage() {
     if (!window.confirm(`Je i sigurt që do ta fshish servisin ${s.number} (${s.device})?`)) return;
     await api.delete(`/services/${s.id}`); toast.success("U fshi"); load();
   };
-  const onSaved = (data, isNew) => { load(); if (isNew && window.confirm("Ta printoj fletëpranimin për klientin?")) openPdf(`/services/${data.id}/receipt.pdf`); };
+  const onSaved = (data, isNew, partsOnly) => { load(); if (partsOnly) return; if (isNew && window.confirm("Ta printoj fletëpranimin për klientin?")) openPdf(`/services/${data.id}/receipt.pdf`); };
   const f = (p) => setFilters((x) => ({ ...x, ...p }));
 
   return (
@@ -105,7 +105,9 @@ export default function ServicesPage() {
                   <td className="px-3 py-2 font-semibold whitespace-nowrap">{s.first_name} {s.last_name}</td>
                   <td className="px-3 py-2 font-mono-pd whitespace-nowrap">{s.phone}</td>
                   <td className="px-3 py-2">{s.device}</td>
-                  <td className="px-3 py-2 min-w-[180px] text-slate-600">{s.defect}</td>
+                  <td className="px-3 py-2 min-w-[180px] text-slate-600">{s.defect}
+                    {s.parts?.length > 0 && <div className="text-[11px] text-emerald-700 mt-0.5" data-testid={`service-parts-summary-${s.id}`}>Pjesë: {s.parts.map((p) => `${p.name} × ${p.quantity}`).join(", ")}</div>}
+                  </td>
                   <td className="px-3 py-2 text-right font-mono-pd whitespace-nowrap">{s.price != null ? eur(s.price) : "—"}</td>
                   <td className="px-3 py-2">
                     <Select value={s.status} onValueChange={(v) => onStatus(s, v)}>
