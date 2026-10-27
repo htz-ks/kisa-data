@@ -51,7 +51,7 @@ export const DeliverDialog = ({ service, refund = false, onClose, onConfirm }) =
 };
 
 const LABELS = { first_name: "Emri", last_name: "Mbiemri", phone: "Telefoni", device: "Pajisja", defect: "Defekti", received_date: "Data e pranimit",
-  price: "Çmimi", parts_cost: "Kostoja e pjesëve", notes: "Shënime", status: "Statusi", paguar: "Paguar", kthyer: "Kthyer klientit" };
+  price: "Çmimi", parts_cost: "Kostoja e pjesëve", passcode: "PIN / Passcode", notes: "Shënime", status: "Statusi", paguar: "Paguar", kthyer: "Kthyer klientit" };
 const show = (v) => (v == null || v === "" ? "—" : String(v));
 
 export const ServiceHistoryDialog = ({ service, onClose }) => (

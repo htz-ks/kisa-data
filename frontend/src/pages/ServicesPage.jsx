@@ -3,7 +3,7 @@ import api, { eur, formatApiErrorDetail } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Pencil, History, Printer, Trash2, Wrench, MessageCircle } from "lucide-react";
+import { Plus, Search, Pencil, History, Printer, Trash2, Wrench, MessageCircle, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { openPdf, waPhone } from "@/components/DebtLedger";
 import { ServiceFormDialog } from "@/components/service/ServiceFormDialog";
@@ -53,7 +53,11 @@ export default function ServicesPage() {
     if (!window.confirm(`Je i sigurt që do ta fshish servisin ${s.number} (${s.device})?`)) return;
     await api.delete(`/services/${s.id}`); toast.success("U fshi"); load();
   };
-  const onSaved = (data, isNew, partsOnly) => { load(); if (partsOnly) return; if (isNew && window.confirm("Ta printoj fletëpranimin për klientin?")) openPdf(`/services/${data.id}/receipt.pdf`); };
+  const onSaved = (data, isNew, partsOnly) => {
+    load(); if (partsOnly || !isNew) return;
+    if (window.confirm("Ta printoj fletëpranimin për klientin?")) openPdf(`/services/${data.id}/receipt.pdf`);
+    if (window.confirm("Ta printoj etiketën 50×30 për telefonin?")) openPdf(`/services/${data.id}/label.pdf`);
+  };
   const f = (p) => setFilters((x) => ({ ...x, ...p }));
 
   return (
@@ -128,6 +132,7 @@ export default function ServicesPage() {
                     <button onClick={() => setForm({ service: s })} className="p-1.5 text-slate-500 hover:text-emerald-600" title="Ndrysho" data-testid={`service-edit-${s.id}`}><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => setHistory(s)} className="p-1.5 text-slate-500 hover:text-sky-600" title="Historiku" data-testid={`service-history-${s.id}`}><History className="w-4 h-4" /></button>
                     <button onClick={() => notifyReady(s)} className={`p-1.5 hover:text-green-600 ${s.status === "repaired" ? "text-green-600" : "text-slate-500"}`} title="Njofto klientin në WhatsApp që telefoni është gati" data-testid={`service-whatsapp-${s.id}`}><MessageCircle className="w-4 h-4" /></button>
+                    <button onClick={() => openPdf(`/services/${s.id}/label.pdf`)} className="p-1.5 text-slate-500 hover:text-amber-600" title="Etiketa 50×30 me barkod (ngjitet prapa telefonit)" data-testid={`service-label-${s.id}`}><Tag className="w-4 h-4" /></button>
                     <button onClick={() => openPdf(`/services/${s.id}/receipt.pdf`)} className="p-1.5 text-slate-500 hover:text-slate-900" title="Fletëpranimi A4" data-testid={`service-print-${s.id}`}><Printer className="w-4 h-4" /></button>
                     <button onClick={() => remove(s)} className="p-1.5 text-slate-500 hover:text-rose-600" title="Fshi" data-testid={`service-delete-${s.id}`}><Trash2 className="w-4 h-4" /></button>
                   </td>

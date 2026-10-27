@@ -10,7 +10,7 @@ import { ServiceParts } from "./ServiceParts";
 import { todayLocal } from "@/components/daybook/util";
 
 const inp = "mt-1 bg-slate-900 border-slate-800";
-const blank = () => ({ first_name: "", last_name: "", phone: "", device: "", defect: "", received_date: todayLocal(), price: "", parts_cost: "", notes: "" });
+const blank = () => ({ first_name: "", last_name: "", phone: "", device: "", passcode: "", defect: "", received_date: todayLocal(), price: "", parts_cost: "", notes: "" });
 
 export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
   const [f, setF] = useState(blank());
@@ -29,7 +29,7 @@ export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
     if (!f.first_name.trim() || !f.phone.trim() || !f.device.trim() || !f.defect.trim()) return toast.error("Plotëso emrin, telefonin, pajisjen dhe defektin");
     setBusy(true);
     try {
-      const body = { first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(), device: f.device.trim(), defect: f.defect.trim(),
+      const body = { first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(), device: f.device.trim(), passcode: (f.passcode || "").trim(), defect: f.defect.trim(),
         received_date: f.received_date, price: num(f.price), parts_cost: num(f.parts_cost), notes: f.notes };
       let { data } = service ? await api.put(`/services/${service.id}`, body) : await api.post("/services", body);
       for (const p of service ? [] : queued) {
@@ -58,7 +58,8 @@ export const ServiceFormDialog = ({ open, service, onClose, onSaved }) => {
           {field("last_name", "Mbiemri i klientit")}
           {field("phone", "Numri i telefonit të klientit *", { input: { inputMode: "tel" } })}
           {field("received_date", "Data e pranimit", { input: { type: "date" } })}
-          {field("device", "Marka dhe modeli i telefonit *", { wide: true, input: { placeholder: "p.sh. Samsung Galaxy S21" } })}
+          {field("device", "Marka dhe modeli i telefonit *", { input: { placeholder: "p.sh. Samsung Galaxy S21" } })}
+          {field("passcode", "PIN / Passcode i telefonit", { input: { placeholder: "p.sh. 1234 ose figura" } })}
           <div className="sm:col-span-2">
             <Label>Defekti / përshkrimi i problemit *</Label>
             <Textarea value={f.defect} onChange={(e) => set({ defect: e.target.value })} rows={2} className={inp} data-testid="service-defect-input" />

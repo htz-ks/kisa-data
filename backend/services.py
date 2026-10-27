@@ -15,7 +15,7 @@ TZ = ZoneInfo("Europe/Belgrade")
 STATUSES = {"pending": "Në pritje", "repairing": "Në riparim", "repaired": "I riparuar", "not_repaired": "Nuk u riparua",
             "delivered": "I dorëzuar klientit", "refunded": "Kthim i pagesës"}
 REFUND_CLEAR = {"refund_amount": None, "refund_method": None, "refund_date": None, "refund_at": None}
-FIELDS = ("first_name", "last_name", "phone", "device", "defect", "received_date", "price", "parts_cost", "notes")
+FIELDS = ("first_name", "last_name", "phone", "device", "passcode", "defect", "received_date", "price", "parts_cost", "notes")
 
 
 def today_local() -> str:
@@ -34,6 +34,7 @@ class ServiceIn(BaseModel):
     last_name: str = Field(default="", max_length=80)
     phone: str = Field(min_length=3, max_length=40)
     device: str = Field(min_length=1, max_length=120)
+    passcode: str = Field(default="", max_length=40)
     defect: str = Field(min_length=1, max_length=500)
     received_date: Optional[str] = None
     price: Optional[float] = Field(default=None, ge=0)
@@ -233,5 +234,44 @@ def make_router(db, require_admin, now_utc, company_header):
         doc.build(story)
         buf.seek(0)
         return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="servis_{s["number"]}.pdf"'})
+
+    @router.get("/{sid}/label.pdf")
+    async def label(sid: str, _a: dict = Depends(require_admin)):
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        from reportlab.graphics.barcode import code128
+        s = await get(sid)
+        W, H = 50 * mm, 30 * mm
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(W, H))
+
+        def fit(text: str, font: str, size: float, width: float) -> str:
+            text = " ".join(str(text or "").split())
+            if stringWidth(text, font, size) <= width:
+                return text
+            while text and stringWidth(text + "…", font, size) > width:
+                text = text[:-1]
+            return text + "…"
+
+        def line(y: float, text: str, font="Helvetica", size=6.5, x=2 * mm, width=46 * mm):
+            c.setFont(font, size)
+            c.drawString(x, y, fit(text, font, size, width))
+
+        d = s["received_date"].split("-")
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2 * mm, H - 5 * mm, s["number"])
+        c.setFont("Helvetica", 6.5)
+        c.drawRightString(W - 2 * mm, H - 5 * mm, f"{d[2]}.{d[1]}.{d[0]}")
+        line(H - 8.5 * mm, f"{s['first_name']} {s.get('last_name', '')}".strip() + f" · {s['phone']}")
+        line(H - 11.5 * mm, s["device"], "Helvetica-Bold", 7)
+        line(H - 14.3 * mm, s["defect"], size=6)
+        line(H - 17.6 * mm, f"PIN: {s.get('passcode') or '—'}", "Helvetica-Bold", 8)
+        bc = code128.Code128(s["number"], barWidth=0.33 * mm, barHeight=8 * mm, quiet=False)
+        bc.drawOn(c, (W - bc.width) / 2, 1.8 * mm)
+        c.showPage()
+        c.save()
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="etiketa_{s["number"]}.pdf"'})
 
     return router
