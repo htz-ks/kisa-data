@@ -97,3 +97,8 @@ Albanian user owns a phone & accessories store and wants a stock/POS management 
 - 2026-06: Servis: pjesë nga stoku (POST/DELETE /api/services/{id}/parts), zbritje/kthim stoku, regjistrim në stock_movements (produkt, sasi, servis, klient, përdorues); kostoja e pjesëve zbritet nga fitimi i servisit; fshirja e servisit kthen pjesët.
 
 - 2026-06: Bankat (banks.py): TEB, Raiffeisen, BKT, NLB. Shitja card/mixed kërkon bankën (sale.bank); banka merr card_paid - komisioni. Blerje/shpenzime/pagesa borxhesh: pay_method cash|bank + bank. Transferta Arka<->Bankë/Bankë<->Bankë (bank_transfers). /banks: gjendja + historiku me saldo. Daybook: daljet me bankë nuk prekin arkën; transfertat lëvizin arkën. Fillojnë nga 0.
+
+## 2026-06 — Gjendja fillestare e bankave
+- POST /api/banks/adjust {bank, balance} (admin): ruan diferencën në koleksionin bank_adjustments; shfaqet si "Gjendje fillestare / Korrigjim" në historikun e bankës; DELETE /api/banks/adjust/{id}. Nuk prek Arkën/Qarkullimet Ditore.
+- UI: butoni "Gjendja fillestare" në BanksPage me fusha për çdo bankë dhe diferencën live.
+- Backlog: WhatsApp njoftim për servisin kur telefoni është gati; fatura WhatsApp për pagesë borxhi; paralajmërim limiti borxhi.

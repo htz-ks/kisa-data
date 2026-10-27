@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Landmark, ArrowLeftRight, Trash2 } from "lucide-react";
+import { Landmark, ArrowLeftRight, Trash2, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { PaySource, BANKS } from "@/components/BankSelect";
 import { todayLocal } from "@/components/daybook/util";
@@ -34,12 +34,49 @@ const TransferDialog = ({ open, onClose, onSaved }) => {
   );
 };
 
+const OpeningDialog = ({ open, banks, onClose, onSaved }) => {
+  const [vals, setVals] = useState(() => Object.fromEntries(banks.map((b) => [b.bank, String(b.balance)])));
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const changed = banks.filter((b) => vals[b.bank] !== "" && Number(vals[b.bank]) !== b.balance);
+      for (const b of changed) await api.post("/banks/adjust", { bank: b.bank, balance: Number(vals[b.bank]) });
+      toast.success(changed.length ? "Gjendja e bankave u përditësua" : "Asnjë ndryshim"); onClose(); onSaved();
+    } catch (e) { toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Gabim gjatë ruajtjes"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md bg-[#141C2B] border-slate-800 text-slate-100" data-testid="opening-dialog">
+        <DialogHeader><DialogTitle>Gjendja fillestare e bankave</DialogTitle></DialogHeader>
+        <p className="text-xs text-slate-400">Shkruaj sa para ke sot në secilën bankë. Sistemi shton një rresht korrigjimi me diferencën — Arka dhe Qarkullimet Ditore nuk ndryshojnë.</p>
+        <div className="space-y-3">
+          {banks.map((b) => {
+            const d = vals[b.bank] === "" ? 0 : Math.round((Number(vals[b.bank]) - b.balance) * 100) / 100;
+            return (
+              <div key={b.bank} className="grid grid-cols-[90px_1fr_110px] items-center gap-3">
+                <Label>{b.bank}</Label>
+                <Input type="number" step="0.01" value={vals[b.bank]} onChange={(e) => setVals({ ...vals, [b.bank]: e.target.value })} className="bg-slate-900 border-slate-800" data-testid={`opening-input-${b.bank}`} />
+                <span className={`text-xs font-mono-pd text-right ${d > 0 ? "text-emerald-500" : d < 0 ? "text-rose-500" : "text-slate-500"}`} data-testid={`opening-diff-${b.bank}`}>{d ? `${d > 0 ? "+" : ""}${eur(d)}` : "pa ndryshim"}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Anulo</Button>
+          <Button onClick={save} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-semibold" data-testid="opening-save">Ruaj</Button></div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function BanksPage() {
   const [data, setData] = useState(null);
   const [bank, setBank] = useState(BANKS[0]);
   const [rows, setRows] = useState([]);
   const [range, setRange] = useState({ date_from: "", date_to: "" });
   const [open, setOpen] = useState(false);
+  const [openAdj, setOpenAdj] = useState(false);
   const load = useCallback(async () => {
     const [b, h] = await Promise.all([api.get("/banks"), api.get(`/banks/history/${bank}`, { params: range })]);
     setData(b.data); setRows(h.data);
@@ -49,6 +86,10 @@ export default function BanksPage() {
     if (!window.confirm("Ta fshij këtë transfertë?")) return;
     await api.delete(`/banks/transfers/${id}`); toast.success("U fshi"); load();
   };
+  const delAdjust = async (id) => {
+    if (!window.confirm("Ta fshij këtë korrigjim të gjendjes?")) return;
+    await api.delete(`/banks/adjust/${id}`); toast.success("U fshi"); load();
+  };
 
   return (
     <div className="p-4 md:p-8 pb-28 max-w-[1500px] mx-auto space-y-5" data-testid="banks-page">
@@ -57,7 +98,10 @@ export default function BanksPage() {
           <div><h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Gjendja e Bankave</h1>
             <p className="text-sm text-slate-500 mt-1">Totali në banka: <b className="font-mono-pd" data-testid="banks-total">{data ? eur(data.total) : "…"}</b></p></div>
         </div>
-        <Button onClick={() => setOpen(true)} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid="transfer-open-btn"><ArrowLeftRight className="w-4 h-4 mr-1" /> Depozitim / Tërheqje</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setOpenAdj(true)} disabled={!data} className="font-semibold" data-testid="opening-open-btn"><Scale className="w-4 h-4 mr-1" /> Gjendja fillestare</Button>
+          <Button onClick={() => setOpen(true)} className="bg-sky-600 hover:bg-sky-500 text-white font-semibold" data-testid="transfer-open-btn"><ArrowLeftRight className="w-4 h-4 mr-1" /> Depozitim / Tërheqje</Button>
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(data?.banks || []).map((b) => (
@@ -92,7 +136,8 @@ export default function BanksPage() {
                   <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap">{m.in ? eur(m.in) : ""}</td>
                   <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap">{m.out ? eur(m.out) : ""}</td>
                   <td className="px-3 py-2 text-right font-mono-pd font-semibold whitespace-nowrap">{eur(m.balance)}</td>
-                  <td className="px-2">{m.transfer_id && <button onClick={() => delTransfer(m.transfer_id)} className="text-slate-400 hover:text-rose-600" data-testid={`bank-transfer-delete-${i}`}><Trash2 className="w-4 h-4" /></button>}</td>
+                  <td className="px-2">{m.transfer_id && <button onClick={() => delTransfer(m.transfer_id)} className="text-slate-400 hover:text-rose-600" data-testid={`bank-transfer-delete-${i}`}><Trash2 className="w-4 h-4" /></button>}
+                    {m.adjust_id && <button onClick={() => delAdjust(m.adjust_id)} className="text-slate-400 hover:text-rose-600" data-testid={`bank-adjust-delete-${i}`}><Trash2 className="w-4 h-4" /></button>}</td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">Asnjë lëvizje për {bank}.</td></tr>}
@@ -100,6 +145,7 @@ export default function BanksPage() {
           </table>
         </div>
       </div>
+      {data && openAdj && <OpeningDialog open={openAdj} banks={data.banks} onClose={() => setOpenAdj(false)} onSaved={load} />}
       <TransferDialog key={String(open)} open={open} onClose={() => setOpen(false)} onSaved={load} />
     </div>
   );

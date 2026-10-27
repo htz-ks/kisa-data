@@ -20,6 +20,12 @@ def check_bank(method: str, bank: Optional[str]) -> Optional[str]:
     return bank
 
 
+class AdjustIn(BaseModel):
+    bank: str
+    balance: float
+    note: str = Field(default="", max_length=200)
+
+
 class TransferIn(BaseModel):
     source: str  # "cash" or a bank
     target: str
@@ -64,6 +70,11 @@ async def movements(db) -> list:
             out.append({**base, "bank": t["source"], "type": "Tërheqje" if t["target"] == "cash" else "Transfertë dalëse", "in": 0.0, "out": t["amount"]})
         if t["target"] in BANKS:
             out.append({**base, "bank": t["target"], "type": "Depozitim" if t["source"] == "cash" else "Transfertë hyrëse", "in": t["amount"], "out": 0.0})
+    async for a in db.bank_adjustments.find({}):
+        amt = round(float(a["amount"]), 2)
+        out.append({"bank": a["bank"], "date": a["date"], "at": a["created_at"], "type": "Gjendje fillestare / Korrigjim", "doc": "", "adjust_id": str(a["_id"]),
+                    "description": f"Gjendja u vendos {a['target_balance']:.2f} €{' · ' + a['note'] if a.get('note') else ''}",
+                    "in": amt if amt > 0 else 0.0, "out": -amt if amt < 0 else 0.0})
     out.sort(key=lambda m: (m["date"], m["at"]))
     return out
 
@@ -107,6 +118,25 @@ def make_router(db, require_admin, now_utc):
                "created_at": now_utc().isoformat(), "created_by": user["id"], "created_by_name": user.get("name", "")}
         r = await db.bank_transfers.insert_one(doc)
         return {"id": str(r.inserted_id)}
+
+    @router.post("/adjust")
+    async def adjust(body: AdjustIn, user: dict = Depends(require_admin)):
+        if body.bank not in BANKS:
+            raise HTTPException(400, "Banka nuk ekziston")
+        current = round(sum(m["in"] - m["out"] for m in await movements(db) if m["bank"] == body.bank), 2)
+        diff = round(round(body.balance, 2) - current, 2)
+        if diff == 0:
+            return {"ok": True, "diff": 0}
+        await db.bank_adjustments.insert_one({"bank": body.bank, "amount": diff, "target_balance": round(body.balance, 2), "previous_balance": current,
+                                              "date": datetime.now(TZ).date().isoformat(), "note": body.note.strip(), "created_at": now_utc().isoformat(),
+                                              "created_by": user["id"], "created_by_name": user.get("name", "")})
+        return {"ok": True, "diff": diff}
+
+    @router.delete("/adjust/{aid}")
+    async def delete_adjust(aid: str, _a: dict = Depends(require_admin)):
+        if not ObjectId.is_valid(aid) or not (await db.bank_adjustments.delete_one({"_id": ObjectId(aid)})).deleted_count:
+            raise HTTPException(404, "Korrigjimi nuk u gjet")
+        return {"ok": True}
 
     @router.delete("/transfers/{tid}")
     async def delete_transfer(tid: str, _a: dict = Depends(require_admin)):
