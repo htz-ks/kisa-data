@@ -39,18 +39,18 @@ export default function PrintLabelPage() {
         .page-wrap { padding: 10px; background: #fff; }
         .label {
           width: 50mm; height: 30mm; overflow: hidden;
-          padding: 1.5mm 2.5mm; box-sizing: border-box;
+          padding: 1mm 1.5mm; box-sizing: border-box;
           border: 1px dashed #999; margin: 0 0 2mm 0;
-          display: flex; flex-direction: column; justify-content: space-between;
+          display: flex; flex-direction: column; justify-content: space-between; align-items: stretch;
         }
-        .name { font-size: 10px; font-weight: 700; line-height: 1.1; overflow: hidden; max-height: 22px; text-align: center; }
-        .specs { font-size: 8px; font-family: monospace; display: flex; gap: 6px; justify-content: center; line-height: 1; }
-        .mid { display: flex; align-items: center; justify-content: space-between; gap: 4px; line-height: 1; }
-        .code { font-size: 8px; font-family: monospace; }
-        .cost-rev { font-size: 8px; font-family: monospace; letter-spacing: 1px; }
-        .price { font-size: 13px; font-weight: 800; font-family: monospace; }
-        .barcode-wrap { line-height: 0; text-align: center; }
-        .barcode-wrap svg { display: block; margin: 0 auto; width: 40mm; height: 10mm; }
+        .name { font-size: 12.5px; font-weight: 800; line-height: 1.05; overflow: hidden; max-height: 27px; text-align: center; }
+        .specs { font-size: 9px; font-family: monospace; display: flex; gap: 6px; justify-content: center; line-height: 1; }
+        .mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; line-height: 1; }
+        .code { font-size: 9px; font-family: monospace; font-weight: 700; }
+        .cost-rev { font-size: 9px; font-family: monospace; letter-spacing: 1px; font-weight: 700; }
+        .price { font-size: 19px; font-weight: 900; font-family: monospace; }
+        .barcode-wrap { line-height: 0; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+        .barcode-wrap svg { display: block; width: 47mm; height: 13mm; }
         @media print {
           .no-print { display: none !important; }
           .page-wrap { padding: 0; }
@@ -79,7 +79,7 @@ export default function PrintLabelPage() {
               </div>
             )}
             <div className="barcode-wrap">
-              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={9} height={26} margin={0} />
+              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={11} height={40} width={2} margin={0} textMargin={1} />
             </div>
             <div className="mid">
               <span className="code">{p.code || "—"}</span>
