@@ -118,7 +118,7 @@ def make_router(db, require_admin, now_utc, company_header):
                 "time": s.get("created_at", ""), "type": "Shitje", "description": f"{names} · {cust}",
                 "invoice_no": s.get("invoice_no", ""), "hyrje": r2(s.get("paid_amount")), "dalje": 0.0,
                 "method": "mixed" if cash_part and bank_part else ("bank" if bank_part else "cash"),
-                "cash_in": cash_part, "bank_in": bank_part, "vat": r2(s.get("vat")), "bank_fee": r2(s.get("bank_fee")),
+                "cash_in": cash_part, "bank_in": bank_part, "bank": s.get("bank") or "", "vat": r2(s.get("vat")), "bank_fee": r2(s.get("bank_fee")),
                 "revenue": r2(s.get("total")), "cost": r2(cost),
                 "cost_missing": missing, "opex": 0.0, "value": r2(s.get("total")),
                 "note": "Me borxh" if pm == "debt" and float(s.get("due_amount") or 0) > 0 else "",

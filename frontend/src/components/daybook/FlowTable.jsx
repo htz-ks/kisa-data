@@ -18,9 +18,10 @@ const Row = ({ e, onEdit, onHistory, onDelete }) => (
       {e.corrected && <span className="ml-2 text-[11px] text-sky-600 font-semibold">korrigjuar</span>}
     </td>
     <td className="px-3 py-2 font-mono-pd whitespace-nowrap">{e.invoice_no || "—"}</td>
-    <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap">{e.hyrje ? eur(e.hyrje) : ""}</td>
+    <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap" data-testid={`flow-cash-in-${e.key}`}>{e.cash_in ? eur(e.cash_in) : ""}</td>
+    <td className="px-3 py-2 text-right font-mono-pd text-sky-600 whitespace-nowrap" data-testid={`flow-bank-in-${e.key}`}>{e.bank_in ? eur(e.bank_in) : ""}</td>
     <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap">{e.dalje ? eur(e.dalje) : ""}</td>
-    <td className="px-3 py-2 whitespace-nowrap">{e.method === "mixed" ? <span title={`Cash ${eur(e.cash_in)} + Bankë ${eur(e.bank_in)}`}>Cash + Bankë<div className="text-[10px] text-slate-500">{eur(e.cash_in)} + {eur(e.bank_in)}</div></span> : e.method === "bank" ? "Bankë" : "Cash"}</td>
+    <td className="px-3 py-2 whitespace-nowrap">{e.method === "mixed" ? `Cash + Bankë${e.bank ? " · " + e.bank : ""}` : e.method === "bank" ? `Bankë${e.bank ? " · " + e.bank : ""}` : "Cash"}</td>
     <td className={`px-3 py-2 text-right font-mono-pd font-semibold whitespace-nowrap ${e.profit > 0 ? "text-emerald-600" : e.profit < 0 ? "text-rose-600" : "text-slate-400"}`}>
       {e.cost_missing ? <span className="inline-flex items-center gap-1 text-amber-600" title="Mungon çmimi i blerjes"><AlertTriangle className="w-3.5 h-3.5" /> i paplotë</span> : e.profit ? eur(e.profit) : "—"}
     </td>
@@ -58,19 +59,20 @@ export const FlowTable = ({ date, entries, summary, onChange }) => {
           <thead className="text-left text-[11px] uppercase tracking-wider text-slate-500 font-mono-pd border-b border-slate-800">
             <tr>
               <th className="px-3 py-2">Data</th><th className="px-3 py-2">Lloji</th><th className="px-3 py-2">Produkti/Përshkrimi</th>
-              <th className="px-3 py-2">Nr. faturës</th><th className="px-3 py-2 text-right">Hyrje (€)</th><th className="px-3 py-2 text-right">Dalje (€)</th>
+              <th className="px-3 py-2">Nr. faturës</th><th className="px-3 py-2 text-right">Hyrje Cash (€)</th><th className="px-3 py-2 text-right">Hyrje Bankë (€)</th><th className="px-3 py-2 text-right">Dalje (€)</th>
               <th className="px-3 py-2">Pagesa</th><th className="px-3 py-2 text-right">Fitim/Humbje (€)</th><th />
             </tr>
           </thead>
           <tbody>
             {entries.map((e) => <Row key={e.key} e={e} onEdit={onEdit} onHistory={setAuditKey} onDelete={onDelete} />)}
-            {entries.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-500">Asnjë transaksion për këtë ditë.</td></tr>}
+            {entries.length === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-slate-500">Asnjë transaksion për këtë ditë.</td></tr>}
           </tbody>
           {entries.length > 0 && (
             <tfoot className="font-bold border-t-2 border-slate-700">
               <tr>
                 <td colSpan={4} className="px-3 py-2">Totali i ditës</td>
-                <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap" data-testid="flow-total-in">{eur(entries.reduce((s, e) => s + e.hyrje, 0))}</td>
+                <td className="px-3 py-2 text-right font-mono-pd text-emerald-600 whitespace-nowrap" data-testid="flow-total-cash-in">{eur(entries.reduce((s, e) => s + e.cash_in, 0))}</td>
+                <td className="px-3 py-2 text-right font-mono-pd text-sky-600 whitespace-nowrap" data-testid="flow-total-bank-in">{eur(entries.reduce((s, e) => s + e.bank_in, 0))}</td>
                 <td className="px-3 py-2 text-right font-mono-pd text-rose-600 whitespace-nowrap" data-testid="flow-total-out">{eur(entries.reduce((s, e) => s + e.dalje, 0))}</td>
                 <td />
                 <td className={`px-3 py-2 text-right font-mono-pd whitespace-nowrap ${summary.net_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{eur(summary.net_profit)}</td>
