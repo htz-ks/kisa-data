@@ -16,7 +16,7 @@ import { WarrantyPicker } from "@/components/WarrantyPicker";
 import { WarrantyTermsBox } from "@/components/WarrantyTermsBox";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useRates, computeSplit, PaymentBreakdown } from "@/components/PaymentSplit";
-import { PaySource } from "@/components/BankSelect";
+import { BANKS } from "@/components/BankSelect";
 import { QuickCustomerDialog } from "@/components/QuickCustomerDialog";
 
 export const DRAFT_KEY = "sale-draft";
@@ -70,10 +70,10 @@ export default function SaleEntryPage() {
     window.dispatchEvent(new Event("sale-draft"));
     const d = JSON.parse(raw);
     setCustomerId(d.customerId); setDocDate(d.docDate); setDueDate(d.dueDate); setPaymentMethod(d.paymentMethod);
-    setPriceMode(d.priceMode); setPaid(d.paid); setRows(d.rows); setNotes(d.notes); setWarranty(d.warranty); setCashAmount(d.cashAmount || "");
+    setPriceMode(d.priceMode); setPaid(d.paid); setRows(d.rows); setNotes(d.notes); setWarranty(d.warranty); setCashAmount(d.cashAmount || ""); setBank(d.bank || "");
   }, []);
   const goTo = (path) => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ customerId, docDate, dueDate, paymentMethod, priceMode, paid, rows, notes, warranty, cashAmount }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ customerId, docDate, dueDate, paymentMethod, priceMode, paid, rows, notes, warranty, cashAmount, bank }));
     window.dispatchEvent(new Event("sale-draft"));
     navigate(path);
   };
@@ -329,24 +329,19 @@ export default function SaleEntryPage() {
             </div>
             <div className="md:col-span-3">
               <Label className={label}>Mënyra pagesës</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <Select value={paymentMethod === "card" || paymentMethod === "mixed" ? `${paymentMethod}:${bank}` : paymentMethod}
+                onValueChange={(v) => { const [m, b] = v.split(":"); setPaymentMethod(m); if (b) setBank(b); }}>
                 <SelectTrigger className={field + " mt-1"} data-testid="sale-payment-select">
-                  <SelectValue />
+                  <SelectValue placeholder="Zgjidh bankën e kartelës" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card-Bank (× {rates?.card_coef ?? 1.33})</SelectItem>
-                  <SelectItem value="mixed">Cash + Card-Bank (e kombinuar)</SelectItem>
-                  <SelectItem value="debt">Kredi / Borxh</SelectItem>
+                  <SelectItem value="cash" data-testid="sale-pay-cash">Cash</SelectItem>
+                  {BANKS.map((b) => <SelectItem key={`c${b}`} value={`card:${b}`} data-testid={`sale-pay-card-${b}`}>Card · {b} (× {rates?.card_coef ?? 1.33})</SelectItem>)}
+                  {BANKS.map((b) => <SelectItem key={`m${b}`} value={`mixed:${b}`} data-testid={`sale-pay-mixed-${b}`}>Cash + Card · {b}</SelectItem>)}
+                  <SelectItem value="debt" data-testid="sale-pay-debt">Kredi / Borxh</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {(paymentMethod === "card" || paymentMethod === "mixed") && (
-              <div className="md:col-span-3">
-                <Label className={label}>Banka e pagesës me kartelë *</Label>
-                <div className="mt-1"><PaySource value={bank} onChange={setBank} cash={false} testId="sale-bank-select" className={field} /></div>
-              </div>
-            )}
             {paymentMethod === "mixed" && (
               <div className="md:col-span-3">
                 <Label className={label}>Shuma Cash (nga artikujt)</Label>
