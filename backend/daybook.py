@@ -252,7 +252,7 @@ def make_router(db, require_admin, now_utc, company_header):
         pbt = r2(gross - fees + service_rev - service_cost + other_income - opex)
         tax = r2(max(0.0, pbt) * tax_pct / 100)
         return {
-            "sales_count": len(sales), "turnover_cash": t_cash, "turnover_card": t_card, "turnover_total": r2(t_cash + t_card),
+            "sales_count": len(sales), "turnover_cash": t_cash, "turnover_card": t_card, "turnover_total": r2(sum(e["revenue"] for e in sales)), "turnover_debt": r2(sum(e["revenue"] - e["cash_in"] - e["bank_in"] for e in sales)),
             "vat": vat, "bank_fees": fees, "profit_before_tax": pbt, "profit_tax": tax, "profit_tax_pct": tax_pct,
             "cash_sales": by("sale", "hyrje"),
             "debt_collections": r2(sum(e["cash_in"] for e in entries if e["type"] == "Arkëtim borxhi")),

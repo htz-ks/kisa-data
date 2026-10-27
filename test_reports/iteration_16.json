@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only test of the Card-Bank coefficient, mixed payment, VAT/profit tax and WhatsApp notification features. No sales were saved: I intercepted POST /api/sales and it was never called. /sale/new: all 4 payment options are present. With a Case A row at 500: Cash total 500 with no breakdown. Card-Bank total 665, breakdown shows normal 500, card 665, fee 39.90. Mixed with cash 200: rest 300, card 399, fee 23.94, total 599. Mixed with cash 350.5: rest 149.50, card 198.84, fee 11.93, total 549.34. Cash of 500 or 0 shows the red error, and Ruaj is blocked with a toast. Switching back to Cash hides the breakdown and the cash input. /pos with a 30 cart: Card 39.90 (fee 2.39). Mixed with cash 10: rest 20, card 26.60, fee 1.60, total 36.60. Cash of 30 blocks checkout with a toast. Back to Cash shows 30 with no breakdown. /daily-flow: all 8 cards and all 7 profit-box fields render. The rates dialog shows 1.33/6/18/10 and closes with Escape; nothing was changed. The month report has all the new columns, and totals tax 37.57 is 10% of 375.68. Excel download works. PDF opens a new tab. /services: the WhatsApp button exists on every row and opens https://wa.me/38344123456?text=... for phone 044 123 456. Setting status to 'I riparuar' shows the confirm 'Telefoni është gati. Ta njoftoj klientin në WhatsApp?' and opens wa.me. The TEST service S-0004 was soft-deleted afterwards (GET now returns 404). Regression: /sales renders 13 rows. /print/sale renders for cash, card (legacy) and debt sales in A4, and in 80mm with TOTALI/Paguar. No page errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/sales (finance.py rounding)", "issue": "Rounding differs between frontend and backend. The frontend uses Math.round (half-up), the backend uses Python round() (banker's / float). Example: rest 12.50 × 1.33 = 16.625 shows as 16.63 in the UI but 16.62 is stored. The customer may see a total 1 cent different from the saved invoice. Use Decimal ROUND_HALF_UP in the backend, or the same epsilon rounding on both sides."},
+      {"endpoint": "/api/daybook report turnover", "issue": "Qarkullimi Cash/Card is built from the amounts actually paid (cash_in/bank_in). Debt (Kredi) sales count in Nr. shitjeve but add 0 to Qarkullimi total. Example: 20.10 shows 3 sales with turnover 0. Confirm with the user that this is intended."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/pos cart", "issues": ["Invalid mixed cash (>= total) shows no inline red error or red border. Only a toast appears on checkout, while /sale/new shows an inline error.", "The 'Pastro' outline button at the top-right of the cart has very low contrast and is almost invisible."]},
+      {"screen": "/sales list", "issues": ["The payment badge shows raw s.payment_method.toUpperCase() ('CARD', 'DEBT', and 'MIXED' for new sales with no colour class) instead of PAY_LABELS ('CARD-BANK', 'CASH + CARD-BANK', 'KREDI / BORXH'). The same applies to the view dialog's 'Pagesa'.", "Borxh 0,00 is shown in orange for fully paid sales."]},
+      {"screen": "/sale/new and /pos mixed (invalid cash)", "issues": ["When cash is 0 or empty, the breakdown shows the 'TOTALI PËR PAGESË' card total (665) while the error is visible. This is acceptable because saving is blocked, but it could be confusing."]},
+      {"screen": "/pos payment select", "issues": ["The option label is 'Cash + Card-Bank' in POS but 'Cash + Card-Bank (e kombinuar)' in /sale/new (inconsistent)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Align rounding between computeSplit (JS) and finance.py (Python round) so the UI total equals the stored total, for example at rest 12.50.",
+    "Use PAY_LABELS for the payment badge and view dialog in SalesPage.jsx, and add a colour for 'mixed'.",
+    "Add an inline invalid-cash error and red border to pos-cash-amount-input, as on /sale/new.",
+    "Optional: confirm with the user whether debt sales should count in Qarkullimi total."
+  ],
+  "critical_code_review_comments": [
+    "SalesPage.jsx lines 66-70 and 103: raw payment_method shown.",
+    "ServicesPage notifyReady calls window.open after an awaited PATCH plus confirm(). Most browsers allow this after confirm, but some mobile browsers may block the popup.",
+    "The useRates module-level cache never refreshes in other open pages after the rates are changed in RatesDialog, until the page is reloaded (computeSplit uses stale rates; the backend still uses current rates, so the UI total could differ from the saved one)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend only)", "frontend": "100% of requested flows pass; minor design issues"},
+  "seed_data_creation": "Created TEST service S-0004 (id 6adfea064b9d7934508dc103, TEST_WA Tester) and soft-deleted it. No sales were created and the rates were not changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "REAL DB: never save sales. Block POST **/api/sales via page.route when testing the save validation. The sale price input has no data-testid; use tr:has([data-testid=sale-product-0]) input[step='0.01']. POS option name is 'Cash + Card-Bank' (exact) and /sale/new is 'Cash + Card-Bank (e kombinuar)'. Case A product id 6ad40318a557153e29874300 (10€), Degjuese 6ada27b670ea892910398602 (20€). Stub window.open to capture wa.me URLs."
+}

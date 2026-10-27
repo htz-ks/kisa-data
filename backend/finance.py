@@ -1,4 +1,5 @@
 """Card-Bank coefficient, bank fee, VAT and profit tax settings + payment split."""
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,24 +20,29 @@ async def get_rates(db) -> dict:
     return {k: float(doc.get(k, v)) for k, v in DEFAULTS.items()}
 
 
+def r2(x) -> float:
+    """Money rounding half-up (16.625 -> 16.63), same as the sale screen."""
+    return float(Decimal(repr(round(float(x or 0), 10))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
 def split_payment(normal_total: float, method: str, cash_amount: Optional[float], rates: dict) -> dict:
     """Cash part stays at the normal price; only the part paid by Card-Bank is multiplied (once) by the coefficient."""
-    normal_total = round(normal_total, 2)
+    normal_total = r2(normal_total)
     if method == "mixed":
-        cash = round(float(cash_amount or 0), 2)
+        cash = r2(float(cash_amount or 0))
         if cash <= 0 or cash >= normal_total:
             raise HTTPException(400, "Te pagesa e kombinuar shuma Cash duhet të jetë më e madhe se 0 dhe më e vogël se çmimi normal")
     elif method == "card":
         cash = 0.0
     else:
         return {"cash_paid": normal_total, "card_normal": 0.0, "card_paid": 0.0, "bank_fee": 0.0, "final_total": normal_total, "vat": 0.0}
-    card_normal = round(normal_total - cash, 2)
-    card_paid = round(card_normal * rates["card_coef"], 2)
-    final_total = round(cash + card_paid, 2)
+    card_normal = r2(normal_total - cash)
+    card_paid = r2(card_normal * rates["card_coef"])
+    final_total = r2(cash + card_paid)
     return {
         "cash_paid": cash, "card_normal": card_normal, "card_paid": card_paid,
-        "bank_fee": round(card_paid * rates["bank_fee_pct"] / 100, 2), "final_total": final_total,
-        "vat": round(final_total * rates["vat_pct"] / (100 + rates["vat_pct"]), 2),
+        "bank_fee": r2(card_paid * rates["bank_fee_pct"] / 100), "final_total": final_total,
+        "vat": r2(final_total * rates["vat_pct"] / (100 + rates["vat_pct"])),
     }
 
 

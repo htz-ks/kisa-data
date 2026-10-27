@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api, { eur } from "@/lib/api";
 
 export const PAY_LABELS = { cash: "CASH", card: "CARD-BANK", mixed: "CASH + CARD-BANK", debt: "KREDI / BORXH" };
-const r2 = (x) => Math.round((Number(x) || 0) * 100) / 100;
+const r2 = (x) => { const v = Number((Number(x) || 0).toFixed(10)); return Math.sign(v) * Math.round(Math.abs(v) * 100 + 1e-7) / 100; };
 
 let cached = null;
 export const useRates = () => {

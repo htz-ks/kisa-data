@@ -280,7 +280,7 @@ export default function POSPage() {
                     <SelectContent>
                       <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="card">Card-Bank (× {rates?.card_coef ?? 1.33})</SelectItem>
-                      <SelectItem value="mixed">Cash + Card-Bank</SelectItem>
+                      <SelectItem value="mixed">Cash + Card-Bank (e kombinuar)</SelectItem>
                       <SelectItem value="debt">Kredi / Borxh</SelectItem>
                     </SelectContent>
                   </Select>
@@ -290,7 +290,8 @@ export default function POSPage() {
                 <div>
                   <Label className="text-xs">Shuma Cash €</Label>
                   <Input type="number" step="0.01" min="0" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
-                    placeholder={`më pak se ${total.toFixed(2)}`} className="mt-1 h-9 bg-slate-900 border-slate-800" data-testid="pos-cash-amount-input" />
+                    placeholder={`më pak se ${total.toFixed(2)}`} className={`mt-1 h-9 bg-slate-900 border-slate-800 ${cashAmount !== "" && !split.valid ? "border-red-500" : ""}`} data-testid="pos-cash-amount-input" />
+                  {cashAmount !== "" && !split.valid && <div className="text-[11px] text-red-500 mt-0.5" data-testid="pos-cash-error">Duhet të jetë mes 0 dhe çmimit normal</div>}
                 </div>
               )}
               {paymentMethod === "debt" && (

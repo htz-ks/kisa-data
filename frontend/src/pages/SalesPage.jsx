@@ -11,6 +11,7 @@ import {
 import PrintMenu from "@/components/PrintMenu";
 import ReturnDialog from "@/components/ReturnDialog";
 import { CorrectButton } from "@/components/daybook/EntryEditDialog";
+import { PAY_LABELS } from "@/components/PaymentSplit";
 import { useAuth } from "@/context/AuthContext";
 
 function waLinkFor(sale, customers) {
@@ -64,10 +65,10 @@ export default function SalesPage() {
                 <td className="px-4 py-3">
                   <Badge variant="outline" className={
                     s.payment_method === "cash" ? "border-emerald-500/40 text-emerald-300" :
-                    s.payment_method === "card" ? "border-sky-500/40 text-sky-300" :
+                    s.payment_method === "card" || s.payment_method === "mixed" ? "border-sky-500/40 text-sky-300" :
                     "border-amber-500/40 text-amber-300"
                   }>
-                    {s.payment_method.toUpperCase()}
+                    {PAY_LABELS[s.payment_method] || s.payment_method.toUpperCase()}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right font-mono-pd font-semibold">{eur(s.total)}</td>
@@ -100,7 +101,7 @@ export default function SalesPage() {
                 <div><span className="text-slate-500">Klienti:</span> {view.customer_name || "Qytetar"}</div>
                 <div><span className="text-slate-500">Data:</span> {(view.created_at || "").slice(0, 16).replace("T", " ")}</div>
                 <div><span className="text-slate-500">Shitësi:</span> {view.created_by_name || "—"}</div>
-                <div><span className="text-slate-500">Pagesa:</span> {view.payment_method?.toUpperCase()}</div>
+                <div><span className="text-slate-500">Pagesa:</span> {PAY_LABELS[view.payment_method] || view.payment_method?.toUpperCase()}</div>
               </div>
               <div className="data-grid bg-[#0B0F17] mt-2">
                 <table className="w-full text-xs">
