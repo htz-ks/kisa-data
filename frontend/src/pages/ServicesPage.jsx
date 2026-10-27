@@ -27,6 +27,7 @@ export default function ServicesPage() {
   const [filters, setFilters] = useState({ q: "", status: "all", date_from: "", date_to: "" });
   const [form, setForm] = useState(null); // {service|null}
   const [deliver, setDeliver] = useState(null);
+  const [refund, setRefund] = useState(null);
   const [history, setHistory] = useState(null);
 
   const load = useCallback(() => {
@@ -41,6 +42,10 @@ export default function ServicesPage() {
   };
   const onStatus = async (s, v) => {
     if (v === "delivered") return setDeliver(s);
+    if (v === "refunded") {
+      if (!["delivered", "refunded"].includes(s.status) || !(s.paid_amount > 0)) return toast.error("Kthimi i pagesës bëhet vetëm për servis të dorëzuar dhe të paguar");
+      return setRefund(s);
+    }
     await setStatus(s, v);
     if (v === "repaired" && window.confirm("Telefoni është gati. Ta njoftoj klientin në WhatsApp?")) notifyReady(s);
   };
@@ -116,7 +121,8 @@ export default function ServicesPage() {
                     </Select>
                   </td>
                   <td className="px-3 py-2 text-right font-mono-pd whitespace-nowrap text-emerald-600" data-testid={`service-paid-${s.id}`}>
-                    {s.status === "delivered" ? <>{eur(s.paid_amount || 0)}<div className="text-[10px] text-slate-500">{s.paid_method === "bank" ? "Bankë" : "Cash"} · {fmtDate(s.delivered_date)}</div></> : "—"}
+                    {["delivered", "refunded"].includes(s.status) ? <>{eur(s.paid_amount || 0)}<div className="text-[10px] text-slate-500">{s.paid_method === "bank" ? "Bankë" : "Cash"} · {fmtDate(s.delivered_date)}</div></> : "—"}
+                    {s.status === "refunded" && <div className="text-amber-600 text-xs mt-1" data-testid={`service-refund-${s.id}`}>Kthyer −{eur(s.refund_amount || 0)}<div className="text-[10px] text-slate-500">{s.refund_method === "bank" ? "Bankë" : "Cash"} · {fmtDate(s.refund_date)}</div></div>}
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap text-right">
                     <button onClick={() => setForm({ service: s })} className="p-1.5 text-slate-500 hover:text-emerald-600" title="Ndrysho" data-testid={`service-edit-${s.id}`}><Pencil className="w-4 h-4" /></button>
@@ -135,6 +141,7 @@ export default function ServicesPage() {
 
       <ServiceFormDialog open={!!form} service={form?.service} onClose={() => setForm(null)} onSaved={onSaved} />
       <DeliverDialog service={deliver} onClose={() => setDeliver(null)} onConfirm={(amt, m) => { const s = deliver; setDeliver(null); setStatus(s, "delivered", amt, m); }} />
+      <DeliverDialog refund service={refund} onClose={() => setRefund(null)} onConfirm={(amt, m) => { const s = refund; setRefund(null); setStatus(s, "refunded", amt, m); }} />
       <ServiceHistoryDialog service={history} onClose={() => setHistory(null)} />
     </div>
   );

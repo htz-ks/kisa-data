@@ -182,7 +182,17 @@ def make_router(db, require_admin, now_utc, company_header):
                 "value": r2(rt.get("refund_total")), "note": "",
             })
 
-        async for sv in db.services.find({"delivered_date": {"$gte": d_from, "$lte": d_to}, "status": "delivered", "deleted": {"$ne": True}}):
+        async for sv in db.services.find({"refund_date": {"$gte": d_from, "$lte": d_to}, "status": "refunded", "deleted": {"$ne": True}}):
+            amt = r2(sv.get("refund_amount"))
+            out.append({
+                "key": f"service_refund:{sv['_id']}", "source": "service", "source_id": str(sv["_id"]), "date": sv["refund_date"],
+                "time": sv.get("refund_at") or sv["refund_date"], "type": "Kthim servisi",
+                "description": f"{sv.get('device', '')} · {sv.get('first_name', '')} {sv.get('last_name', '')} · paratë iu kthyen klientit".strip(),
+                "invoice_no": sv.get("number", ""), "hyrje": 0.0, "dalje": amt, "method": sv.get("refund_method") or "cash",
+                "revenue": -amt, "cost": 0.0, "cost_missing": False, "opex": 0.0, "value": amt, "note": "",
+            })
+
+        async for sv in db.services.find({"delivered_date": {"$gte": d_from, "$lte": d_to}, "status": {"$in": ["delivered", "refunded"]}, "deleted": {"$ne": True}}):
             paid = r2(sv.get("paid_amount"))
             cost = r2(r2(sv.get("parts_cost")) + sum(x["cost_price"] * x["quantity"] for x in sv.get("parts", [])))
             if paid <= 0 and cost <= 0:

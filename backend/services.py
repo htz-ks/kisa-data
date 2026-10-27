@@ -12,7 +12,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 TZ = ZoneInfo("Europe/Belgrade")
-STATUSES = {"pending": "Në pritje", "repairing": "Në riparim", "repaired": "I riparuar", "delivered": "I dorëzuar klientit"}
+STATUSES = {"pending": "Në pritje", "repairing": "Në riparim", "repaired": "I riparuar", "not_repaired": "Nuk u riparua",
+            "delivered": "I dorëzuar klientit", "refunded": "Kthim i pagesës"}
+REFUND_CLEAR = {"refund_amount": None, "refund_method": None, "refund_date": None, "refund_at": None}
 FIELDS = ("first_name", "last_name", "phone", "device", "defect", "received_date", "price", "parts_cost", "notes")
 
 
@@ -45,7 +47,7 @@ class PartIn(BaseModel):
 
 
 class StatusIn(BaseModel):
-    status: Literal["pending", "repairing", "repaired", "delivered"]
+    status: Literal["pending", "repairing", "repaired", "not_repaired", "delivered", "refunded"]
     paid_amount: Optional[float] = Field(default=None, ge=0)
     paid_method: Literal["cash", "bank"] = "cash"
 
@@ -115,6 +117,19 @@ def make_router(db, require_admin, now_utc, company_header):
     async def set_status(sid: str, body: StatusIn, user: dict = Depends(require_admin)):
         old = await get(sid)
         upd: dict = {"status": body.status}
+        if body.status == "refunded":
+            paid = float(old.get("paid_amount") or 0)
+            if old.get("status") not in ("delivered", "refunded") or paid <= 0:
+                raise HTTPException(400, "Kthimi i pagesës bëhet vetëm për servis të dorëzuar dhe të paguar")
+            amt = round(paid if body.paid_amount is None else body.paid_amount, 2)
+            if amt <= 0 or amt > paid:
+                raise HTTPException(400, f"Shuma e kthimit duhet të jetë nga 0.01 deri në {paid:.2f} €")
+            upd.update({"refund_amount": amt, "refund_method": body.paid_method, "refund_date": old.get("refund_date") or today_local(),
+                        "refund_at": old.get("refund_at") or now_utc().isoformat()})
+            await db.services.update_one({"_id": old["_id"]}, {"$set": upd, "$push": {"history": {**who(user), "action": "Kthim i pagesës",
+                                         "changes": {"status": [STATUSES.get(old.get("status")), STATUSES["refunded"]], "kthyer": [old.get("refund_amount"), amt]}}}})
+            return out(await get(sid))
+        upd.update(REFUND_CLEAR)
         if body.status == "delivered":
             if body.paid_amount is None:
                 raise HTTPException(400, "Shkruaj sa pagoi klienti (0 nëse falas)")
