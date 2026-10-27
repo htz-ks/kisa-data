@@ -35,21 +35,28 @@ export default function PrintLabelPage() {
     <div>
       <style>{`
         @page { size: 50mm 30mm; margin: 0; }
-        body { margin: 0; font-family: Arial, sans-serif; color: #000; }
-        .page-wrap { padding: 10px; }
+        html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000; background: #fff !important; }
+        .page-wrap { padding: 10px; background: #fff; }
         .label {
-          width: 50mm; height: 30mm;
-          padding: 2mm 3mm; box-sizing: border-box;
-          border: 1px solid #000; margin: 0 0 1mm 0; page-break-inside: avoid;
+          width: 50mm; height: 30mm; overflow: hidden;
+          padding: 1.5mm 2.5mm; box-sizing: border-box;
+          border: 1px dashed #999; margin: 0 0 2mm 0;
           display: flex; flex-direction: column; justify-content: space-between;
         }
-        .name { font-size: 11px; font-weight: 700; line-height: 1.1; overflow: hidden; max-height: 24px; }
-        .mid { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+        .name { font-size: 10px; font-weight: 700; line-height: 1.1; overflow: hidden; max-height: 22px; text-align: center; }
+        .specs { font-size: 8px; font-family: monospace; display: flex; gap: 6px; justify-content: center; line-height: 1; }
+        .mid { display: flex; align-items: center; justify-content: space-between; gap: 4px; line-height: 1; }
         .code { font-size: 8px; font-family: monospace; }
         .cost-rev { font-size: 8px; font-family: monospace; letter-spacing: 1px; }
-        .price { text-align: center; font-size: 15px; font-weight: 800; font-family: monospace; }
-        .barcode-wrap svg { width: 36mm; height: 10mm; }
-        @media print { .no-print { display: none !important; } .label { margin: 0; } }
+        .price { font-size: 13px; font-weight: 800; font-family: monospace; }
+        .barcode-wrap { line-height: 0; text-align: center; }
+        .barcode-wrap svg { display: block; margin: 0 auto; width: 40mm; height: 10mm; }
+        @media print {
+          .no-print { display: none !important; }
+          .page-wrap { padding: 0; }
+          .label { border: 0; margin: 0; page-break-after: always; break-after: page; }
+          .label:last-child { page-break-after: auto; break-after: auto; }
+        }
       `}</style>
       <div className="no-print" style={{ padding: 10, background: "#eee", display: "flex", gap: 8 }}>
         <button onClick={() => window.print()} style={{ padding: "6px 10px" }}>Printo {copies} etiketa</button>
@@ -59,26 +66,26 @@ export default function PrintLabelPage() {
 
       <div className="page-wrap">
         {labels.map((_, i) => (
-          <div key={i} className="label">
+          <div key={i} className="label" data-testid={`print-label-${i}`}>
             <div className="name">
               {p.brand ? <span style={{ color: "#555", fontWeight: 400 }}>{p.brand} </span> : null}
               {p.name}
             </div>
             {(p.gb || p.ram || p.battery_percent) && (
-              <div style={{ fontSize: 9, fontFamily: "monospace", color: "#111", display: "flex", gap: 6, justifyContent: "center" }}>
+              <div className="specs">
                 {p.gb && <span><b>{p.gb}</b>GB</span>}
                 {p.ram && <span>RAM <b>{p.ram}</b></span>}
                 {p.battery_percent && <span>Bat <b>{p.battery_percent}%</b></span>}
               </div>
             )}
-            <div className="barcode-wrap" style={{ textAlign: "center" }}>
-              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={8} height={24} margin={0} />
+            <div className="barcode-wrap">
+              <Barcode value={barcodeValue} format="CODE128" displayValue={true} fontSize={9} height={26} margin={0} />
             </div>
             <div className="mid">
               <span className="code">{p.code || "—"}</span>
+              <span className="price">€ {Number(p.sale_price || 0).toFixed(2)}</span>
               <span className="cost-rev">{costReversed}</span>
             </div>
-            <div className="price">€ {Number(p.sale_price || 0).toFixed(2)}</div>
           </div>
         ))}
       </div>
